@@ -10,20 +10,20 @@ type MetricInfo struct {
 	Value string
 }
 
-type UrlParseError struct {
+type URLParseError struct {
 	Message string
 	Status  int
 }
 
-func (e *UrlParseError) Error() string {
+func (e *URLParseError) Error() string {
 	return e.Message
 }
 
-func ParseUrl(url string, prefix string) (MetricInfo, error) {
+func ParseURL(url string, prefix string) (MetricInfo, error) {
 	trimPath := strings.TrimPrefix(url, prefix)
 
 	if trimPath == "" {
-		return MetricInfo{}, &UrlParseError{
+		return MetricInfo{}, &URLParseError{
 			Message: "metric name is needed",
 			Status:  http.StatusNotFound,
 		}
@@ -37,7 +37,7 @@ func ParseUrl(url string, prefix string) (MetricInfo, error) {
 		return res, nil
 	}
 
-	return MetricInfo{}, &UrlParseError{
+	return MetricInfo{}, &URLParseError{
 		Message: "Invalid URL format",
 		Status:  http.StatusBadRequest,
 	}

@@ -11,9 +11,9 @@ import (
 func handleGauge(w http.ResponseWriter, r *http.Request) {
 	checkPost(w, r)
 
-	metricInfo, err := utils.ParseUrl(r.URL.Path, "/update/gauge/")
+	metricInfo, err := utils.ParseURL(r.URL.Path, "/update/gauge/")
 	if err != nil {
-		pErr := err.(*utils.UrlParseError)
+		pErr := err.(*utils.URLParseError)
 		http.Error(w, pErr.Message, pErr.Status)
 	}
 
@@ -29,9 +29,9 @@ func handleGauge(w http.ResponseWriter, r *http.Request) {
 func handleCounter(w http.ResponseWriter, r *http.Request) {
 	checkPost(w, r)
 
-	metricInfo, err := utils.ParseUrl(r.URL.Path, "/update/counter/")
+	metricInfo, err := utils.ParseURL(r.URL.Path, "/update/counter/")
 	if err != nil {
-		pErr := err.(*utils.UrlParseError)
+		pErr := err.(*utils.URLParseError)
 		http.Error(w, pErr.Message, pErr.Status)
 	}
 
