@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testReguest(t *testing.T, ts *httptest.Server, method, path string) *http.Response {
+func testReguest(t *testing.T, ts *httptest.Server, method, path string) int {
 	req, err := http.NewRequest(method, ts.URL+path, nil)
 	require.NoError(t, err)
 
@@ -22,7 +22,7 @@ func testReguest(t *testing.T, ts *httptest.Server, method, path string) *http.R
 	_, err = io.Copy(io.Discard, resp.Body)
 	require.NoError(t, err)
 
-	return resp
+	return resp.StatusCode
 }
 
 func TestRouter(t *testing.T) {
@@ -57,8 +57,7 @@ func TestRouter(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		resp := testReguest(t, ts, "POST", v.url)
-		assert.Equal(t, v.status, resp.StatusCode, v.url)
+		statusCode := testReguest(t, ts, "POST", v.url)
+		assert.Equal(t, v.status, statusCode, v.url)
 	}
-
 }
