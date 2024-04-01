@@ -9,7 +9,7 @@ type Storage interface {
 	GetCounter(name string) int64
 	SetCounter(name string, value int64)
 	GetGauge(name string) float64
-	SetGauge(name string, value int64)
+	SetGauge(name string, value float64)
 }
 
 func NewMemStorage() *MemStorage {

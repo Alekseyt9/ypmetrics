@@ -1,56 +1,47 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/Alekseyt9/ypmetrics/internal/server/utils"
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
+	"github.com/go-chi/chi/v5"
 )
 
-func HandleGauge(w http.ResponseWriter, r *http.Request) {
-	checkPost(w, r)
+func HandleGauge(store storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := chi.URLParam(r, "name")
+		value := chi.URLParam(r, "value")
 
-	metricInfo, err := utils.ParseURL(r.URL.Path, "/update/gauge/")
-	if err != nil {
-		pErr := err.(*utils.URLParseError)
-		http.Error(w, pErr.Message, pErr.Status)
+		gaugeValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			http.Error(w, "incorrect metric value", http.StatusBadRequest)
+		}
+
+		store.SetGauge(name, gaugeValue)
+		w.WriteHeader(http.StatusOK)
 	}
-
-	gaugeValue, err := strconv.ParseFloat(metricInfo.Value, 64)
-	if err != nil {
-		http.Error(w, "incorrect metric value", http.StatusBadRequest)
-	}
-
-	fmt.Printf("gauge added: %s-%f", metricInfo.Name, gaugeValue)
-	w.WriteHeader(http.StatusOK)
 }
 
-func HandleCounter(w http.ResponseWriter, r *http.Request) {
-	checkPost(w, r)
+func HandleCounter(store storage.Storage) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		name := chi.URLParam(r, "name")
+		value := chi.URLParam(r, "value")
 
-	metricInfo, err := utils.ParseURL(r.URL.Path, "/update/counter/")
-	if err != nil {
-		pErr := err.(*utils.URLParseError)
-		http.Error(w, pErr.Message, pErr.Status)
+		counterValue, err := strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			http.Error(w, "incorrect metric value", http.StatusBadRequest)
+		}
+
+		store.SetCounter(name, counterValue)
+		w.WriteHeader(http.StatusOK)
 	}
-
-	counterValue, err := strconv.ParseInt(metricInfo.Value, 10, 64)
-	if err != nil {
-		http.Error(w, "incorrect metric value", http.StatusBadRequest)
-	}
-
-	fmt.Printf("counter added: %s-%d", metricInfo.Name, counterValue)
-	w.WriteHeader(http.StatusOK)
 }
 
 func HandleIncorrectType(w http.ResponseWriter, r *http.Request) {
-	checkPost(w, r)
 	http.Error(w, "incorrect metric type", http.StatusBadRequest)
 }
 
-func checkPost(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST method only", http.StatusMethodNotAllowed)
-	}
+func HandleNotValue(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "value is missing", http.StatusNotFound)
 }
