@@ -46,7 +46,7 @@ func handleCounter(w http.ResponseWriter, r *http.Request) {
 
 func checkPost(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "POST method only", http.StatusNotFound)
+		http.Error(w, "POST method only", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -56,7 +56,6 @@ func handleIncorrectType(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
 	http.HandleFunc("/update/gauge/", handleGauge)
 	http.HandleFunc("/update/counter/", handleCounter)
 	http.HandleFunc("/update/", handleIncorrectType)
