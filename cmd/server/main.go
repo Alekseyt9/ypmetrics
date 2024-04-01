@@ -9,10 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func main() {
-
-	store := storage.NewMemStorage()
-
+func Router(store storage.Storage) chi.Router {
 	r := chi.NewRouter()
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/*", handlers.HandleIncorrectType)
@@ -29,6 +26,11 @@ func main() {
 			})
 		})
 	})
+	return r
+}
 
+func main() {
+	store := storage.NewMemStorage()
+	r := Router(store)
 	log.Fatal(http.ListenAndServe(":8080", r))
 }

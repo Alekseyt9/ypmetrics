@@ -24,6 +24,7 @@ func main() {
 
 		if interval%int64(reportInterval) == 0 {
 			services.SendMetrics(client, gMap, cMap)
+			counter = 0
 		}
 
 		interval = interval + 1
