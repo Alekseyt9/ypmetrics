@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -43,7 +44,8 @@ func UpdateMetrics(gMap map[string]float64, cMap map[string]int64, counter int64
 	cMap["PollCount"] = int64(counter)
 }
 
-func SendMetrics(client *resty.Client, gMap map[string]float64, cMap map[string]int64) {
+func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, cMap map[string]int64) {
+
 	for k, v := range gMap {
 		client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
@@ -51,7 +53,8 @@ func SendMetrics(client *resty.Client, gMap map[string]float64, cMap map[string]
 				"type":  k,
 				"value": strconv.FormatFloat(v, 'f', -1, 64),
 			}).
-			Post("http://localhost:8080/update/gauge/{type}/{value}")
+			Post(baseURL + "/update/gauge/{type}/{value}")
+		fmt.Printf(baseURL + "/update/gauge/{type}/{value}")
 	}
 
 	for k, v := range cMap {
@@ -61,6 +64,6 @@ func SendMetrics(client *resty.Client, gMap map[string]float64, cMap map[string]
 				"type":  k,
 				"value": strconv.FormatInt(v, 10),
 			}).
-			Post("http://localhost:8080/update/counter/{type}/{value}")
+			Post(baseURL + "/update/counter/{type}/{value}")
 	}
 }

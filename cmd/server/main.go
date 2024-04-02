@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
@@ -38,8 +38,18 @@ func Router(store storage.Storage) chi.Router {
 	return r
 }
 
-func main() {
+func run() error {
 	store := storage.NewMemStorage()
 	r := Router(store)
-	log.Fatal(http.ListenAndServe(":8080", r))
+
+	fmt.Println("Running server on ", *flagAddr)
+	return http.ListenAndServe(*flagAddr, r)
+}
+
+func main() {
+	parseFlags()
+
+	if err := run(); err != nil {
+		panic(err)
+	}
 }

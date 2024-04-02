@@ -7,9 +7,10 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-func main() {
-	pollInterval := 2
-	reportInterval := 10
+func run() error {
+	pollInterval := *flagPollInterval
+	reportInterval := *flagReportInterval
+
 	var interval int64 = 0
 	var counter int64 = 0
 	gMap := make(map[string]float64)
@@ -23,11 +24,19 @@ func main() {
 		}
 
 		if interval%int64(reportInterval) == 0 {
-			services.SendMetrics(client, gMap, cMap)
+			services.SendMetrics(client, *flagAddr, gMap, cMap)
 			counter = 0
 		}
 
 		interval = interval + 1
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func main() {
+	parseFlags()
+
+	if err := run(); err != nil {
+		panic(err)
 	}
 }
