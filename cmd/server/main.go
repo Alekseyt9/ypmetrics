@@ -11,6 +11,7 @@ import (
 
 func Router(store storage.Storage) chi.Router {
 	r := chi.NewRouter()
+
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/*", handlers.HandleIncorrectType)
 		r.Route("/gauge", func(r chi.Router) {
@@ -26,6 +27,14 @@ func Router(store storage.Storage) chi.Router {
 			})
 		})
 	})
+
+	r.Route("/value", func(r chi.Router) {
+		r.Get("/gauge/{name}", handlers.HandleGetGauge(store))
+		r.Get("/counter/{name}", handlers.HandleGetCounter(store))
+	})
+
+	r.Get("/", handlers.HandleGetAll(store))
+
 	return r
 }
 

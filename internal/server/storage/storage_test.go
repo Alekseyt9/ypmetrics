@@ -44,7 +44,8 @@ func TestGaugeStorage(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			store.SetGauge(test.metric, test.set)
-			v := store.GetGauge(test.metric)
+			v, ok := store.GetGauge(test.metric)
+			assert.True(t, ok)
 			assert.Equal(t, test.want, v)
 		})
 	}
@@ -88,7 +89,8 @@ func TestCounterStorage(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			store.SetCounter(test.metric, test.set)
-			v := store.GetCounter(test.metric)
+			v, ok := store.GetCounter(test.metric)
+			assert.True(t, ok)
 			assert.Equal(t, test.want, v)
 		})
 	}
