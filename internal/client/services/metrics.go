@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -53,8 +52,7 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 				"type":  k,
 				"value": strconv.FormatFloat(v, 'f', -1, 64),
 			}).
-			Post(baseURL + "/update/gauge/{type}/{value}")
-		fmt.Printf(baseURL + "/update/gauge/{type}/{value}")
+			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
 	}
 
 	for k, v := range cMap {
@@ -64,6 +62,6 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 				"type":  k,
 				"value": strconv.FormatInt(v, 10),
 			}).
-			Post(baseURL + "/update/counter/{type}/{value}")
+			Post("http://" + baseURL + "/update/counter/{type}/{value}")
 	}
 }
