@@ -6,8 +6,13 @@ import (
 
 	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
+	"github.com/caarlos0/env/v6"
 	"github.com/go-chi/chi/v5"
 )
+
+type Config struct {
+	Address string `env:"ADDRESS"`
+}
 
 func Router(store storage.Storage) chi.Router {
 	r := chi.NewRouter()
@@ -46,8 +51,19 @@ func run() error {
 	return http.ListenAndServe(*flagAddr, r)
 }
 
+func setEnv() {
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		panic(err)
+	}
+	if cfg.Address != "" {
+		*flagAddr = cfg.Address
+	}
+}
+
 func main() {
 	parseFlags()
+	setEnv()
 
 	if err := run(); err != nil {
 		panic(err)

@@ -21,7 +21,6 @@ func HandleGetGauge(store storage.Storage) func(w http.ResponseWriter, r *http.R
 		} else {
 			http.Error(w, "metric not found", http.StatusNotFound)
 		}
-
 	}
 }
 
