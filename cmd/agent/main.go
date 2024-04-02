@@ -14,7 +14,7 @@ type Config struct {
 	PollInterval   *int   `env:"POLL_INTERVAL"`
 }
 
-func run() error {
+func run() {
 	pollInterval := *flagPollInterval
 	reportInterval := *flagReportInterval
 
@@ -60,8 +60,5 @@ func setEnv() {
 func main() {
 	parseFlags()
 	setEnv()
-
-	if err := run(); err != nil {
-		panic(err)
-	}
+	run()
 }

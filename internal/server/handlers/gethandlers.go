@@ -17,7 +17,6 @@ func HandleGetGauge(store storage.Storage) func(w http.ResponseWriter, r *http.R
 		v, ok := store.GetGauge(name)
 		if ok {
 			io.WriteString(w, strconv.FormatFloat(v, 'f', -1, 64))
-			w.WriteHeader(http.StatusOK)
 		} else {
 			http.Error(w, "metric not found", http.StatusNotFound)
 		}
@@ -31,7 +30,6 @@ func HandleGetCounter(store storage.Storage) func(w http.ResponseWriter, r *http
 		v, ok := store.GetCounter(name)
 		if ok {
 			io.WriteString(w, strconv.FormatInt(v, 10))
-			w.WriteHeader(http.StatusOK)
 		} else {
 			http.Error(w, "metric not found", http.StatusNotFound)
 		}
