@@ -46,7 +46,7 @@ func (store *MemStorage) SetCounter(name string, value int64) {
 }
 
 func (store *MemStorage) GetCounterAll() []NameValueCounter {
-	result := make([]NameValueCounter, 0, len(store.gaugeData))
+	result := make([]NameValueCounter, 0, len(store.counterData))
 	for name, value := range store.counterData {
 		result = append(result, NameValueCounter{Name: name, Value: value})
 	}
