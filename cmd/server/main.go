@@ -5,10 +5,10 @@ import (
 )
 
 func main() {
-	run.ParseFlags()
-	run.SetEnv()
+	cfg := ParseFlags()
+	SetEnv(cfg)
 
-	if err := run.Run(); err != nil {
+	if err := run.Run(cfg); err != nil {
 		panic(err)
 	}
 }

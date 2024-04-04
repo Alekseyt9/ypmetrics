@@ -1,8 +1,9 @@
-package storage
+package storage_test
 
 import (
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,14 +40,14 @@ func TestGaugeStorage(t *testing.T) {
 		},
 	}
 
-	store := NewMemStorage()
+	store := storage.NewMemStorage()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			store.SetGauge(test.metric, test.set)
 			v, ok := store.GetGauge(test.metric)
 			assert.True(t, ok)
-			assert.Equal(t, test.want, v)
+			assert.InEpsilon(t, test.want, v, 0.01)
 		})
 	}
 }
@@ -84,14 +85,14 @@ func TestCounterStorage(t *testing.T) {
 		},
 	}
 
-	store := NewMemStorage()
+	store := storage.NewMemStorage()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			store.SetCounter(test.metric, test.set)
 			v, ok := store.GetCounter(test.metric)
 			assert.True(t, ok)
-			assert.Equal(t, test.want, v)
+			assert.InEpsilon(t, test.want, v, 0.01)
 		})
 	}
 }

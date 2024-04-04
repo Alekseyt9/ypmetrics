@@ -6,12 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func testReguestPost(t *testing.T, ts *httptest.Server, path string) int {
-	req, err := http.NewRequest("POST", ts.URL+path, nil)
+	req, err := http.NewRequest(http.MethodPost, ts.URL+path, nil)
 	require.NoError(t, err)
 
 	resp, err := ts.Client().Do(req)
@@ -53,6 +52,6 @@ func (suite *TestSuite) TestRouterPost() {
 
 	for _, v := range tests {
 		statusCode := testReguestPost(suite.T(), suite.ts, v.url)
-		assert.Equal(suite.T(), v.status, statusCode, v.url)
+		suite.Equal(v.status, statusCode, v.url)
 	}
 }

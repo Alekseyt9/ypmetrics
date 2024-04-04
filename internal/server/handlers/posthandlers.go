@@ -33,10 +33,10 @@ func (h *Handler) HandleCounter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) HandleIncorrectType(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleIncorrectType(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "incorrect metric type", http.StatusBadRequest)
 }
 
-func (h *Handler) HandleNotValue(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleNotValue(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "value is missing", http.StatusNotFound)
 }

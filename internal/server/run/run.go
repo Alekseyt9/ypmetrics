@@ -1,13 +1,19 @@
 package run
 
 import (
-	"fmt"
+	"log"
 	"net/http"
+	"time"
 
 	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
-	"github.com/caarlos0/env"
 	"github.com/go-chi/chi/v5"
+)
+
+const (
+	readTimeout  = 5 * time.Second
+	writeTimeout = 10 * time.Second
+	idleTimeout  = 15 * time.Second
 )
 
 type Config struct {
@@ -44,20 +50,18 @@ func Router(store storage.Storage) chi.Router {
 	return r
 }
 
-func Run() error {
+func Run(cfg *Config) error {
 	store := storage.NewMemStorage()
 	r := Router(store)
 
-	fmt.Println("Running server on ", *FlagAddr)
-	return http.ListenAndServe(*FlagAddr, r)
-}
+	server := &http.Server{
+		Addr:         cfg.Address,
+		Handler:      r,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		IdleTimeout:  idleTimeout,
+	}
 
-func SetEnv() {
-	var cfg Config
-	if err := env.Parse(&cfg); err != nil {
-		panic(err)
-	}
-	if cfg.Address != "" {
-		*FlagAddr = cfg.Address
-	}
+	log.Printf("Running server on %s", cfg.Address)
+	return server.ListenAndServe()
 }

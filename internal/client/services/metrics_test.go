@@ -1,13 +1,14 @@
-package services
+package services_test
 
 import (
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/client/services"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestUpdateMetrics(t *testing.T) {
-	var counter int64 = 0
+	var counter int64
 	gMap := make(map[string]float64)
 	cMap := make(map[string]int64)
 
@@ -26,7 +27,7 @@ func TestUpdateMetrics(t *testing.T) {
 		"PollCount",
 	}
 
-	UpdateMetrics(gMap, cMap, counter)
+	services.UpdateMetrics(gMap, cMap, counter)
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {
@@ -41,5 +42,4 @@ func TestUpdateMetrics(t *testing.T) {
 			assert.True(t, ok)
 		})
 	}
-
 }

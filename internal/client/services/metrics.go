@@ -1,6 +1,7 @@
 package services
 
 import (
+	"log"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -40,28 +41,33 @@ func UpdateMetrics(gMap map[string]float64, cMap map[string]int64, counter int64
 	gMap["Sys"] = float64(ms.Sys)
 	gMap["TotalAlloc"] = float64(ms.TotalAlloc)
 	gMap["RandomValue"] = rand.Float64()
-	cMap["PollCount"] = int64(counter)
+	cMap["PollCount"] = counter
 }
 
 func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, cMap map[string]int64) {
-
 	for k, v := range gMap {
-		client.R().
+		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
 				"type":  k,
 				"value": strconv.FormatFloat(v, 'f', -1, 64),
 			}).
 			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
+		if err != nil {
+			log.Fatalf("Ошибка при выполнении запроса: %v", err)
+		}
 	}
 
 	for k, v := range cMap {
-		client.R().
+		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
 				"type":  k,
 				"value": strconv.FormatInt(v, 10),
 			}).
 			Post("http://" + baseURL + "/update/counter/{type}/{value}")
+		if err != nil {
+			log.Fatalf("Ошибка при выполнении запроса: %v", err)
+		}
 	}
 }

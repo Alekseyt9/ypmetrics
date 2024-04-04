@@ -11,7 +11,7 @@ import (
 )
 
 func testReguestGet(t *testing.T, ts *httptest.Server, test *getTestStruct) {
-	reqp, err := http.NewRequest("POST", ts.URL+test.posturl, nil)
+	reqp, err := http.NewRequest(http.MethodPost, ts.URL+test.posturl, nil)
 	require.NoError(t, err)
 	respp, err := ts.Client().Do(reqp)
 	require.NoError(t, err)
@@ -19,7 +19,7 @@ func testReguestGet(t *testing.T, ts *httptest.Server, test *getTestStruct) {
 	_, err = io.Copy(io.Discard, respp.Body)
 	require.NoError(t, err)
 
-	reqg, err := http.NewRequest("GET", ts.URL+test.geturl, nil)
+	reqg, err := http.NewRequest(http.MethodGet, ts.URL+test.geturl, nil)
 	require.NoError(t, err)
 	respg, err := ts.Client().Do(reqg)
 	require.NoError(t, err)
@@ -27,7 +27,7 @@ func testReguestGet(t *testing.T, ts *httptest.Server, test *getTestStruct) {
 	bodyBytes, err := io.ReadAll(respg.Body)
 	require.NoError(t, err)
 	bodyString := string(bodyBytes)
-	assert.Equal(t, bodyString, test.want)
+	assert.Equal(t, test.want, bodyString)
 }
 
 type getTestStruct struct {

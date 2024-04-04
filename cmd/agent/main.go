@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	run.ParseFlags()
-	run.SetEnv()
-	run.Run()
+	cfg := ParseFlags()
+	SetEnv(cfg)
+	run.Run(cfg)
 }

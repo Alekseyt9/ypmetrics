@@ -1,6 +1,6 @@
 module github.com/Alekseyt9/ypmetrics
 
-go 1.21.8
+go 1.22
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
