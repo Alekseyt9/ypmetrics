@@ -8,28 +8,19 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
-var FlagAddr *string = flag.StringP("address", "a", "localhost:8080", "address and port to connect to server")
-var FlagReportInterval *int = flag.IntP("reportInterval", "r", 10, "frequency of sending metrics to the server")
-var FlagPollInterval *int = flag.IntP("pollInterval", "p", 2, "frequency of polling metrics from the runtime package")
-
-func ParseFlags() {
+func ParseFlags(cfg *run.Config) {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+	address := flag.StringP("address", "a", "localhost:8080", "address and port to run server")
+	reportInterval := flag.IntP("reportInterval", "r", 10, "frequency of sending metrics to the server")
+	pollInterval := flag.IntP("pollInterval", "p", 2, "frequency of polling metrics from the runtime package")
 	flag.Parse()
+	cfg.Address = *address
+	cfg.ReportInterval = *reportInterval
+	cfg.PollInterval = *pollInterval
 }
 
-func SetEnv() {
-	var cfg run.Config
-	if err := env.Parse(&cfg); err != nil {
+func SetEnv(cfg *run.Config) {
+	if err := env.Parse(cfg); err != nil {
 		panic(err)
-	}
-
-	if cfg.Address != "" {
-		*FlagAddr = cfg.Address
-	}
-	if cfg.PollInterval != nil {
-		*FlagPollInterval = *cfg.PollInterval
-	}
-	if cfg.ReportInterval != nil {
-		*FlagReportInterval = *cfg.ReportInterval
 	}
 }

@@ -54,7 +54,7 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 			}).
 			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
 		if err != nil {
-			log.Fatalf("Ошибка при выполнении запроса: %v", err)
+			log.Printf("Ошибка при выполнении запроса: %v", err)
 		}
 	}
 
@@ -67,7 +67,7 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 			}).
 			Post("http://" + baseURL + "/update/counter/{type}/{value}")
 		if err != nil {
-			log.Fatalf("Ошибка при выполнении запроса: %v", err)
+			log.Printf("Ошибка при выполнении запроса: %v", err)
 		}
 	}
 }

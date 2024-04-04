@@ -47,7 +47,7 @@ func TestGaugeStorage(t *testing.T) {
 			store.SetGauge(test.metric, test.set)
 			v, ok := store.GetGauge(test.metric)
 			assert.True(t, ok)
-			assert.InEpsilon(t, test.want, v, 0.01)
+			assert.InDelta(t, test.want, v, 0.01)
 		})
 	}
 }
@@ -92,7 +92,7 @@ func TestCounterStorage(t *testing.T) {
 			store.SetCounter(test.metric, test.set)
 			v, ok := store.GetCounter(test.metric)
 			assert.True(t, ok)
-			assert.InEpsilon(t, test.want, v, 0.01)
+			assert.InDelta(t, test.want, v, 0.01)
 		})
 	}
 }
