@@ -1,6 +1,8 @@
 package handlers
 
-import "github.com/Alekseyt9/ypmetrics/internal/server/storage"
+import (
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
+)
 
 type Handler struct {
 	store storage.Storage
