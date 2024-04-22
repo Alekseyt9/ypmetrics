@@ -3,19 +3,14 @@ package logger
 import (
 	"net/http"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 // абстрагируемся от реализации
 type Logger interface {
-	Debugf(template string, args ...interface{})
-	Infof(template string, args ...interface{})
-	Warnf(template string, args ...interface{})
-	Errorf(template string, args ...interface{})
-	DPanicf(template string, args ...interface{})
-	Panicf(template string, args ...interface{})
-	Fatalf(template string, args ...interface{})
+	Debug(template string, keysAndValues ...interface{})
+	Info(template string, keysAndValues ...interface{})
+	Warn(template string, keysAndValues ...interface{})
+	Error(template string, keysAndValues ...interface{})
 }
 
 func WithLogging(h http.Handler, log Logger) http.Handler {
@@ -34,20 +29,13 @@ func WithLogging(h http.Handler, log Logger) http.Handler {
 		h.ServeHTTP(&lw, r)
 
 		duration := time.Since(start)
-		log.Infof(
-			"uri %s, method %s, duration %v, status %s, size %v",
-			r.RequestURI, r.Method, duration,
-			responseData.status, responseData.size,
+		log.Info("query: ",
+			"uri", r.RequestURI,
+			"method", r.Method,
+			"duration", duration,
+			"status", responseData.status,
+			"size", responseData.size,
 		)
 	}
 	return http.HandlerFunc(logFn)
-}
-
-func NewLogger() Logger {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		panic(err)
-	}
-	sugar := logger.Sugar()
-	return sugar
 }

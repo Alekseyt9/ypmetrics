@@ -9,8 +9,10 @@ import (
 
 func TestUpdateMetrics(t *testing.T) {
 	var counter int64
-	gMap := make(map[string]float64)
-	cMap := make(map[string]int64)
+	stat := &services.Stat{
+		CounterMap: make(map[string]int64),
+		GaugeMap:   make(map[string]float64),
+	}
 
 	testsGauge := []string{
 		"Alloc", "BuckHashSys", "Frees", "BuckHashSys",
@@ -27,18 +29,22 @@ func TestUpdateMetrics(t *testing.T) {
 		"PollCount",
 	}
 
-	services.UpdateMetrics(gMap, cMap, counter)
+	services.UpdateMetrics(stat, counter)
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {
-			_, ok := gMap[name]
+			stat.GaugeLock.RLock()
+			defer stat.GaugeLock.RUnlock()
+			_, ok := stat.GaugeMap[name]
 			assert.True(t, ok)
 		})
 	}
 
 	for _, name := range testsCounter {
 		t.Run(name, func(t *testing.T) {
-			_, ok := cMap[name]
+			stat.CounterLock.RLock()
+			defer stat.CounterLock.RUnlock()
+			_, ok := stat.CounterMap[name]
 			assert.True(t, ok)
 		})
 	}

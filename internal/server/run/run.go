@@ -58,7 +58,7 @@ func Router(store storage.Storage, log logger.Logger) chi.Router {
 
 func Run(cfg *Config) error {
 	store := storage.NewMemStorage()
-	logger := logger.NewLogger()
+	logger := logger.NewSlogLogger()
 
 	r := Router(store, logger)
 
@@ -70,6 +70,6 @@ func Run(cfg *Config) error {
 		IdleTimeout:  idleTimeout,
 	}
 
-	logger.Infof("Running server on %s", cfg.Address)
+	logger.Info("Running server on ", "address", cfg.Address)
 	return server.ListenAndServe()
 }

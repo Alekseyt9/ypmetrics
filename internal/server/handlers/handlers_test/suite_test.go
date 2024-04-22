@@ -17,7 +17,7 @@ type TestSuite struct {
 
 func (suite *TestSuite) SetupSuite() {
 	store := storage.NewMemStorage()
-	logger := logger.NewLogger()
+	logger := logger.NewSlogLogger()
 	suite.ts = httptest.NewServer(run.Router(store, logger))
 }
 

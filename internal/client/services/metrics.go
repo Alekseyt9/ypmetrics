@@ -5,47 +5,63 @@ import (
 	"math/rand"
 	"runtime"
 	"strconv"
+	"sync"
 
 	"github.com/go-resty/resty/v2"
 )
 
-func UpdateMetrics(gMap map[string]float64, cMap map[string]int64, counter int64) {
-	ms := runtime.MemStats{}
-	runtime.ReadMemStats(&ms)
-	gMap["Alloc"] = float64(ms.Alloc)
-	gMap["BuckHashSys"] = float64(ms.BuckHashSys)
-	gMap["Frees"] = float64(ms.Frees)
-	gMap["BuckHashSys"] = float64(ms.BuckHashSys)
-	gMap["GCCPUFraction"] = float64(ms.GCCPUFraction)
-	gMap["GCSys"] = float64(ms.GCSys)
-	gMap["HeapAlloc"] = float64(ms.HeapAlloc)
-	gMap["HeapIdle"] = float64(ms.HeapIdle)
-	gMap["HeapInuse"] = float64(ms.HeapInuse)
-	gMap["HeapObjects"] = float64(ms.HeapObjects)
-	gMap["HeapReleased"] = float64(ms.HeapReleased)
-	gMap["HeapSys"] = float64(ms.HeapSys)
-	gMap["LastGC"] = float64(ms.LastGC)
-	gMap["Lookups"] = float64(ms.Lookups)
-	gMap["MCacheInuse"] = float64(ms.MCacheInuse)
-	gMap["MCacheSys"] = float64(ms.MCacheSys)
-	gMap["MSpanInuse"] = float64(ms.MSpanInuse)
-	gMap["MSpanSys"] = float64(ms.MSpanSys)
-	gMap["Mallocs"] = float64(ms.Mallocs)
-	gMap["NextGC"] = float64(ms.NextGC)
-	gMap["NumForcedGC"] = float64(ms.NumForcedGC)
-	gMap["NumGC"] = float64(ms.NumGC)
-	gMap["OtherSys"] = float64(ms.OtherSys)
-	gMap["PauseTotalNs"] = float64(ms.PauseTotalNs)
-	gMap["StackInuse"] = float64(ms.StackInuse)
-	gMap["StackSys"] = float64(ms.StackSys)
-	gMap["Sys"] = float64(ms.Sys)
-	gMap["TotalAlloc"] = float64(ms.TotalAlloc)
-	gMap["RandomValue"] = rand.Float64()
-	cMap["PollCount"] = counter
+type Stat struct {
+	CounterMap  map[string]int64
+	CounterLock sync.RWMutex
+	GaugeMap    map[string]float64
+	GaugeLock   sync.RWMutex
 }
 
-func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, cMap map[string]int64) {
-	for k, v := range gMap {
+func UpdateMetrics(stat *Stat, counter int64) {
+	ms := runtime.MemStats{}
+	runtime.ReadMemStats(&ms)
+
+	stat.GaugeLock.Lock()
+	stat.GaugeMap["Alloc"] = float64(ms.Alloc)
+	stat.GaugeMap["BuckHashSys"] = float64(ms.BuckHashSys)
+	stat.GaugeMap["Frees"] = float64(ms.Frees)
+	stat.GaugeMap["BuckHashSys"] = float64(ms.BuckHashSys)
+	stat.GaugeMap["GCCPUFraction"] = float64(ms.GCCPUFraction)
+	stat.GaugeMap["GCSys"] = float64(ms.GCSys)
+	stat.GaugeMap["HeapAlloc"] = float64(ms.HeapAlloc)
+	stat.GaugeMap["HeapIdle"] = float64(ms.HeapIdle)
+	stat.GaugeMap["HeapInuse"] = float64(ms.HeapInuse)
+	stat.GaugeMap["HeapObjects"] = float64(ms.HeapObjects)
+	stat.GaugeMap["HeapReleased"] = float64(ms.HeapReleased)
+	stat.GaugeMap["HeapSys"] = float64(ms.HeapSys)
+	stat.GaugeMap["LastGC"] = float64(ms.LastGC)
+	stat.GaugeMap["Lookups"] = float64(ms.Lookups)
+	stat.GaugeMap["MCacheInuse"] = float64(ms.MCacheInuse)
+	stat.GaugeMap["MCacheSys"] = float64(ms.MCacheSys)
+	stat.GaugeMap["MSpanInuse"] = float64(ms.MSpanInuse)
+	stat.GaugeMap["MSpanSys"] = float64(ms.MSpanSys)
+	stat.GaugeMap["Mallocs"] = float64(ms.Mallocs)
+	stat.GaugeMap["NextGC"] = float64(ms.NextGC)
+	stat.GaugeMap["NumForcedGC"] = float64(ms.NumForcedGC)
+	stat.GaugeMap["NumGC"] = float64(ms.NumGC)
+	stat.GaugeMap["OtherSys"] = float64(ms.OtherSys)
+	stat.GaugeMap["PauseTotalNs"] = float64(ms.PauseTotalNs)
+	stat.GaugeMap["StackInuse"] = float64(ms.StackInuse)
+	stat.GaugeMap["StackSys"] = float64(ms.StackSys)
+	stat.GaugeMap["Sys"] = float64(ms.Sys)
+	stat.GaugeMap["TotalAlloc"] = float64(ms.TotalAlloc)
+	stat.GaugeMap["RandomValue"] = rand.Float64()
+	stat.GaugeLock.Unlock()
+
+	stat.CounterLock.Lock()
+	stat.CounterMap["PollCount"] = counter
+	stat.CounterLock.Unlock()
+}
+
+func SendMetrics(client *resty.Client, baseURL string, stat *Stat) {
+
+	stat.GaugeLock.RLock()
+	for k, v := range stat.GaugeMap {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
@@ -57,8 +73,10 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 			log.Printf("Ошибка при выполнении запроса: %v", err)
 		}
 	}
+	stat.GaugeLock.RUnlock()
 
-	for k, v := range cMap {
+	stat.CounterLock.RLock()
+	for k, v := range stat.CounterMap {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
@@ -70,4 +88,6 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 			log.Printf("Ошибка при выполнении запроса: %v", err)
 		}
 	}
+	stat.CounterLock.RUnlock()
+
 }
