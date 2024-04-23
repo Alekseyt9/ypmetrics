@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/compress"
 	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
@@ -28,6 +29,9 @@ func Router(store storage.Storage, log logger.Logger) chi.Router {
 	// тк использую библиотеку chi - подключаю middleware стандартным способом
 	r.Use(func(next http.Handler) http.Handler {
 		return logger.WithLogging(next, log)
+	})
+	r.Use(func(next http.Handler) http.Handler {
+		return compress.WithCompress(next)
 	})
 
 	r.Route("/update", func(r chi.Router) {

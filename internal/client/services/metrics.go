@@ -52,7 +52,7 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.GaugeMap["StackSys"] = float64(ms.StackSys)
 	stat.GaugeMap["Sys"] = float64(ms.Sys)
 	stat.GaugeMap["TotalAlloc"] = float64(ms.TotalAlloc)
-	stat.GaugeMap["RandomValue"] = rand.Float64()
+	stat.GaugeMap["RandomValue"] = rand.Float64() // nolint:gosec
 	stat.GaugeLock.Unlock()
 
 	stat.CounterLock.Lock()
@@ -73,9 +73,16 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 			panic(err)
 		}
 
+		compressedOut, err := BrotliCompress(out)
+		if err != nil {
+			log.Printf("Ошибка при сжатии: %v", err)
+		}
+
 		_, err = client.R().
 			SetHeader("Content-Type", "Content-Type: application/json").
-			SetBody(out).
+			SetHeader("Content-Encoding", "br").
+			SetHeader("Accept-Encoding", "br").
+			SetBody(compressedOut).
 			Post("http://" + baseURL + "/update")
 
 		if err != nil {
@@ -96,9 +103,16 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 			panic(err)
 		}
 
+		compressedOut, err := BrotliCompress(out)
+		if err != nil {
+			log.Printf("Ошибка при сжатии: %v", err)
+		}
+
 		_, err = client.R().
 			SetHeader("Content-Type", "Content-Type: application/json").
-			SetBody(out).
+			SetHeader("Content-Encoding", "br").
+			SetHeader("Accept-Encoding", "br").
+			SetBody(compressedOut).
 			Post("http://" + baseURL + "/update")
 		if err != nil {
 			log.Printf("Ошибка при выполнении запроса: %v", err)
