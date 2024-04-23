@@ -38,7 +38,10 @@ func WithCompress(next http.Handler) http.Handler {
 func handlegzip(w http.ResponseWriter, r *http.Request, next http.Handler) {
 	wr, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 	if err != nil {
-		io.WriteString(w, err.Error())
+		_, err1 := io.WriteString(w, err.Error())
+		if err1 != nil {
+			panic(err1)
+		}
 		return
 	}
 	defer wr.Close()

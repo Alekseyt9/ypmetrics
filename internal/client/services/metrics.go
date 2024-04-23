@@ -52,7 +52,7 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.GaugeMap["StackSys"] = float64(ms.StackSys)
 	stat.GaugeMap["Sys"] = float64(ms.Sys)
 	stat.GaugeMap["TotalAlloc"] = float64(ms.TotalAlloc)
-	stat.GaugeMap["RandomValue"] = rand.Float64() // nolint:gosec
+	stat.GaugeMap["RandomValue"] = rand.Float64() //nolint:gosec //rand хватает
 	stat.GaugeLock.Unlock()
 
 	stat.CounterLock.Lock()

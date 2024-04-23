@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// абстрагируемся от реализации
+// Абстрагируемся от реализации.
 type Logger interface {
 	Debug(template string, keysAndValues ...interface{})
 	Info(template string, keysAndValues ...interface{})

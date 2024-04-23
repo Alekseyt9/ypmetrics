@@ -3,7 +3,6 @@ package handlers_test
 import (
 	"bytes"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +23,6 @@ type jsonTestStruct struct {
 }
 
 func testReguestJSON(t *testing.T, ts *httptest.Server, test *jsonTestStruct) {
-
 	data := common.Metrics{
 		ID:    test.ID,
 		MType: test.mType,
@@ -65,15 +63,14 @@ func testReguestJSON(t *testing.T, ts *httptest.Server, test *jsonTestStruct) {
 	require.NoError(t, err)
 
 	var vData common.Metrics
-	log.Printf("!!! %v", string(bodyBytes))
 	err = easyjson.Unmarshal(bodyBytes, &vData)
 	require.NoError(t, err)
 
 	switch test.mType {
 	case "gauge":
-		assert.Equal(t, test.wantGauge, *vData.Value, "gauge")
+		assert.InDelta(t, test.wantGauge, *vData.Value, 0.01, "gauge")
 	case "counter":
-		assert.Equal(t, test.wantCounter, *vData.Delta, "counter")
+		assert.InDelta(t, test.wantCounter, *vData.Delta, 0.01, "counter")
 	}
 }
 

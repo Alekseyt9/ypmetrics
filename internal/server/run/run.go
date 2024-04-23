@@ -30,9 +30,7 @@ func Router(store storage.Storage, log logger.Logger) chi.Router {
 	r.Use(func(next http.Handler) http.Handler {
 		return logger.WithLogging(next, log)
 	})
-	r.Use(func(next http.Handler) http.Handler {
-		return compress.WithCompress(next)
-	})
+	r.Use(compress.WithCompress)
 
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", h.HandleUpdateJSON)

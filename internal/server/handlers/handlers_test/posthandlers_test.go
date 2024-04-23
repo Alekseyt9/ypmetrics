@@ -32,7 +32,7 @@ func (suite *TestSuite) TestRouterPost() {
 			{
 				url:    "/update",
 				status: http.StatusBadRequest,
-			},*/ //not actual after iter 7
+			},*/ // not actual after iter 7
 		{
 			url:    "/update/unknown/",
 			status: http.StatusBadRequest,

@@ -42,7 +42,7 @@ func GzipCompress(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := w.Close(); err != nil {
+	if err = w.Close(); err != nil {
 		return nil, err
 	}
 

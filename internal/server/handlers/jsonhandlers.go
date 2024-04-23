@@ -10,8 +10,8 @@ import (
 )
 
 func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
-	сontentType := r.Header.Get("Content-Type")
-	if !strings.HasPrefix(сontentType, "application/json") {
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		if b {
 			restData.Value = &v
 		} else {
-			var z float64 = 0
+			var z float64
 			restData.Value = &z
 		}
 	case "counter":
@@ -62,7 +62,7 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		if b {
 			restData.Delta = &v
 		} else {
-			var z int64 = 0
+			var z int64
 			restData.Delta = &z
 		}
 	}
@@ -81,9 +81,9 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
-	сontentType := r.Header.Get("Content-Type")
-	if !strings.HasPrefix(сontentType, "application/json") {
-		http.Error(w, "incorrect Content-Type "+сontentType, http.StatusUnsupportedMediaType)
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
+		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -123,7 +123,7 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		if b {
 			restData.Value = &v
 		} else {
-			var z float64 = 0
+			var z float64
 			restData.Value = &z
 		}
 	case "counter":
@@ -131,7 +131,7 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		if b {
 			restData.Delta = &v
 		} else {
-			var z int64 = 0
+			var z int64
 			restData.Delta = &z
 		}
 	}
