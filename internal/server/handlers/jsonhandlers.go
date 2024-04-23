@@ -27,25 +27,30 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
 	}
 
+	var restData = common.Metrics{
+		MType: data.MType,
+		ID:    data.ID,
+	}
+
 	switch data.MType {
 	case "gauge":
 		h.store.SetGauge(data.ID, *data.Value)
 		v, b := h.store.GetGauge(data.ID)
 		if b {
-			data.Value = &v
+			restData.Value = &v
 		}
 	case "counter":
 		h.store.SetCounter(data.ID, *data.Delta)
 		v, b := h.store.GetCounter(data.ID)
 		if b {
-			data.Delta = &v
+			restData.Delta = &v
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	out, err := easyjson.Marshal(data)
+	out, err := easyjson.Marshal(restData)
 	if err != nil {
 		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
 	}
@@ -73,23 +78,28 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
 	}
 
+	var restData = common.Metrics{
+		MType: data.MType,
+		ID:    data.ID,
+	}
+
 	switch data.MType {
 	case "gauge":
 		v, b := h.store.GetGauge(data.ID)
 		if b {
-			data.Value = &v
+			restData.Value = &v
 		}
 	case "counter":
 		v, b := h.store.GetCounter(data.ID)
 		if b {
-			data.Delta = &v
+			restData.Delta = &v
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	out, err := easyjson.Marshal(data)
+	out, err := easyjson.Marshal(restData)
 	if err != nil {
 		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
 	}
