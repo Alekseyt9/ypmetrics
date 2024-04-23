@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/go-resty/resty/v2"
+	"github.com/mailru/easyjson"
 )
 
 type Stat struct {
@@ -58,8 +60,54 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.CounterLock.Unlock()
 }
 
-func SendMetrics(client *resty.Client, baseURL string, stat *Stat) {
+func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
+	stat.GaugeLock.RLock()
+	for k, v := range stat.GaugeMap {
+		data := common.Metrics{
+			ID:    k,
+			MType: "gauge",
+			Value: &v,
+		}
+		out, err := easyjson.Marshal(data)
+		if err != nil {
+			panic(err)
+		}
 
+		_, err = client.R().
+			SetHeader("Content-Type", "Content-Type: application/json").
+			SetBody(out).
+			Post("http://" + baseURL + "/update")
+
+		if err != nil {
+			log.Printf("Ошибка при выполнении запроса: %v", err)
+		}
+	}
+	stat.GaugeLock.RUnlock()
+
+	stat.CounterLock.RLock()
+	for k, v := range stat.CounterMap {
+		data := common.Metrics{
+			ID:    k,
+			MType: "gauge",
+			Delta: &v,
+		}
+		out, err := easyjson.Marshal(data)
+		if err != nil {
+			panic(err)
+		}
+
+		_, err = client.R().
+			SetHeader("Content-Type", "Content-Type: application/json").
+			SetBody(out).
+			Post("http://" + baseURL + "/update")
+		if err != nil {
+			log.Printf("Ошибка при выполнении запроса: %v", err)
+		}
+	}
+	stat.CounterLock.RUnlock()
+}
+
+func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) {
 	stat.GaugeLock.RLock()
 	for k, v := range stat.GaugeMap {
 		_, err := client.R().
@@ -89,5 +137,4 @@ func SendMetrics(client *resty.Client, baseURL string, stat *Stat) {
 		}
 	}
 	stat.CounterLock.RUnlock()
-
 }

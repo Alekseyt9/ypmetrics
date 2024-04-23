@@ -41,7 +41,7 @@ func Run(cfg *Config) {
 			if len(stat.CounterMap) == 0 {
 				continue
 			}
-			services.SendMetrics(client, cfg.Address, stat)
+			services.SendMetricsJSON(client, cfg.Address, stat)
 			atomic.StoreInt64(&counter, 0)
 			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}

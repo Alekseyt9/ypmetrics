@@ -31,6 +31,7 @@ func Router(store storage.Storage, log logger.Logger) chi.Router {
 	})
 
 	r.Route("/update", func(r chi.Router) {
+		r.Post("/", h.HandleUpdateJSON)
 		r.Post("/*", h.HandleIncorrectType)
 		r.Route("/gauge", func(r chi.Router) {
 			r.Post("/", h.HandleNotValue)
@@ -47,6 +48,7 @@ func Router(store storage.Storage, log logger.Logger) chi.Router {
 	})
 
 	r.Route("/value", func(r chi.Router) {
+		r.Post("/", h.HandleValueJSON)
 		r.Get("/gauge/{name}", h.HandleGetGauge)
 		r.Get("/counter/{name}", h.HandleGetCounter)
 	})
