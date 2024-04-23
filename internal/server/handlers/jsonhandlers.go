@@ -58,7 +58,7 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	сontentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(сontentType, "application/json") {
-		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
+		http.Error(w, "incorrect Content-Type "+сontentType, http.StatusUnsupportedMediaType)
 	}
 
 	body, err := io.ReadAll(r.Body)
