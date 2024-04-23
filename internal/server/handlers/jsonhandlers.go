@@ -38,12 +38,18 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		v, b := h.store.GetGauge(data.ID)
 		if b {
 			restData.Value = &v
+		} else {
+			var z float64 = 0
+			restData.Value = &z
 		}
 	case "counter":
 		h.store.SetCounter(data.ID, *data.Delta)
 		v, b := h.store.GetCounter(data.ID)
 		if b {
 			restData.Delta = &v
+		} else {
+			var z int64 = 0
+			restData.Delta = &z
 		}
 	}
 
@@ -88,11 +94,17 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		v, b := h.store.GetGauge(data.ID)
 		if b {
 			restData.Value = &v
+		} else {
+			var z float64 = 0
+			restData.Value = &z
 		}
 	case "counter":
 		v, b := h.store.GetCounter(data.ID)
 		if b {
 			restData.Delta = &v
+		} else {
+			var z int64 = 0
+			restData.Delta = &z
 		}
 	}
 

@@ -88,7 +88,7 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 	for k, v := range stat.CounterMap {
 		data := common.Metrics{
 			ID:    k,
-			MType: "gauge",
+			MType: "counter",
 			Delta: &v,
 		}
 		out, err := easyjson.Marshal(data)

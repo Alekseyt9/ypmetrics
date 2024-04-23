@@ -38,9 +38,6 @@ func Run(cfg *Config) {
 
 	go func() {
 		for {
-			if len(stat.CounterMap) == 0 {
-				continue
-			}
 			services.SendMetricsJSON(client, cfg.Address, stat)
 			atomic.StoreInt64(&counter, 0)
 			time.Sleep(time.Duration(reportInterval) * time.Second)
