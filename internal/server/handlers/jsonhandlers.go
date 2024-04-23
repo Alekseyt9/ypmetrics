@@ -42,6 +42,9 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	out, err := easyjson.Marshal(data)
 	if err != nil {
 		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
@@ -50,9 +53,6 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "error write body", http.StatusBadRequest)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
@@ -86,6 +86,9 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 	out, err := easyjson.Marshal(data)
 	if err != nil {
 		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
@@ -94,7 +97,4 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "error write body", http.StatusBadRequest)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
