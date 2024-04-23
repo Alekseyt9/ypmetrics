@@ -21,6 +21,20 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
+	if strings.Contains(r.Header.Get("Content-Encoding"), "br") {
+		body, err = common.BrotliDecompress(body)
+		if err != nil {
+			http.Error(w, "error decompress brodli", http.StatusBadRequest)
+		}
+	}
+
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		body, err = common.GZIPDecompress(body)
+		if err != nil {
+			http.Error(w, "error decompress gzip", http.StatusBadRequest)
+		}
+	}
+
 	var data common.Metrics
 	err = easyjson.Unmarshal(body, &data)
 	if err != nil {
@@ -76,6 +90,20 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
+	}
+
+	if strings.Contains(r.Header.Get("Content-Encoding"), "br") {
+		body, err = common.BrotliDecompress(body)
+		if err != nil {
+			http.Error(w, "error decompress brodli", http.StatusBadRequest)
+		}
+	}
+
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		body, err = common.GZIPDecompress(body)
+		if err != nil {
+			http.Error(w, "error decompress gzip", http.StatusBadRequest)
+		}
 	}
 
 	var data common.Metrics

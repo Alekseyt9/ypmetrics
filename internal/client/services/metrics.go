@@ -73,7 +73,7 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 			panic(err)
 		}
 
-		compressedOut, err := BrotliCompress(out)
+		compressedOut, err := common.BrotliCompress(out)
 		if err != nil {
 			log.Printf("Ошибка при сжатии: %v", err)
 		}
@@ -103,7 +103,7 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 			panic(err)
 		}
 
-		compressedOut, err := BrotliCompress(out)
+		compressedOut, err := common.BrotliCompress(out)
 		if err != nil {
 			log.Printf("Ошибка при сжатии: %v", err)
 		}
