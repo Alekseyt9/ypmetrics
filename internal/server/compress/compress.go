@@ -31,7 +31,6 @@ func WithCompress(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(w, r)
-		return
 	}
 	return http.HandlerFunc(logFn)
 }
