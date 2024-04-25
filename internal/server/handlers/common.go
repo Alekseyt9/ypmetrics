@@ -1,15 +1,33 @@
 package handlers
 
 import (
+	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
 type Handler struct {
-	store storage.Storage
+	store    storage.Storage
+	settings HandlerSettings
+	log      logger.Logger
 }
 
-func NewHandler(store storage.Storage) *Handler {
+type HandlerSettings struct {
+	StoreToFileSync bool // сохранять сразу после изменения значений
+	FilePath        string
+}
+
+func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
 	return &Handler{
-		store: store,
+		store:    store,
+		settings: settings,
+	}
+}
+
+func (h *Handler) StoreToFile() {
+	if h.settings.StoreToFileSync {
+		err := h.store.SaveToFile(h.settings.FilePath)
+		if err != nil {
+			h.log.Error("Error save to file", "filepath", h.settings.FilePath)
+		}
 	}
 }

@@ -1,7 +1,11 @@
 package run
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/server/compress"
@@ -18,12 +22,20 @@ const (
 )
 
 type Config struct {
-	Address string `env:"ADDRESS"`
+	Address         string `env:"ADDRESS"`
+	StoreInterval   int    `env:"STORE_INTERVAL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
+	Restore         bool   `env:"RESTORE"`
 }
 
-func Router(store storage.Storage, log logger.Logger) chi.Router {
-	h := handlers.NewHandler(store)
+func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
+	hs := handlers.HandlerSettings{}
+	if cfg.StoreInterval == 0 {
+		hs.StoreToFileSync = true
+		hs.FilePath = cfg.FileStoragePath
+	}
 
+	h := handlers.NewHandler(store, hs)
 	r := chi.NewRouter()
 
 	// тк использую библиотеку chi - подключаю middleware стандартным способом
@@ -64,7 +76,14 @@ func Run(cfg *Config) error {
 	store := storage.NewMemStorage()
 	logger := logger.NewSlogLogger()
 
-	r := Router(store, logger)
+	if cfg.Restore && cfg.FileStoragePath != "" {
+		err := store.LoadFromFile(cfg.FileStoragePath)
+		if err != nil {
+			logger.Info("Load from file", "error", err)
+		}
+	}
+
+	r := Router(store, logger, cfg)
 
 	server := &http.Server{
 		Addr:         cfg.Address,
@@ -73,6 +92,31 @@ func Run(cfg *Config) error {
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
 	}
+
+	if cfg.StoreInterval > 0 {
+		go func() {
+			for {
+				if err := store.SaveToFile(cfg.FileStoragePath); err != nil {
+					logger.Info("Save to dump", "error", err)
+				}
+				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
+			}
+		}()
+	}
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+
+		if err := store.SaveToFile(cfg.FileStoragePath); err != nil {
+			logger.Info("Save to dump", "error", err)
+		}
+
+		if err := server.Shutdown(context.Background()); err != nil {
+			logger.Info("Server shutdown", "error", err)
+		}
+	}()
 
 	logger.Info("Running server on ", "address", cfg.Address)
 	return server.ListenAndServe()
