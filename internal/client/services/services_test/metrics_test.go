@@ -33,8 +33,8 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {
-			stat.GaugeLock.RLock()
-			defer stat.GaugeLock.RUnlock()
+			stat.MapLock.RLock()
+			defer stat.MapLock.RUnlock()
 			_, ok := stat.GaugeMap[name]
 			assert.True(t, ok)
 		})
@@ -42,8 +42,8 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, name := range testsCounter {
 		t.Run(name, func(t *testing.T) {
-			stat.CounterLock.RLock()
-			defer stat.CounterLock.RUnlock()
+			stat.MapLock.RLock()
+			defer stat.MapLock.RUnlock()
 			_, ok := stat.CounterMap[name]
 			assert.True(t, ok)
 		})

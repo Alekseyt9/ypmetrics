@@ -1,6 +1,7 @@
 package run
 
 import (
+	"log"
 	"os"
 	"os/signal"
 	"sync/atomic"
@@ -38,7 +39,10 @@ func Run(cfg *Config) {
 
 	go func() {
 		for {
-			services.SendMetricsJSON(client, cfg.Address, stat)
+			err := services.SendMetricsJSON(client, cfg.Address, stat)
+			if err != nil {
+				log.Print(err)
+			}
 			atomic.StoreInt64(&counter, 0)
 			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}

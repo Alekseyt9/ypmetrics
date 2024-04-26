@@ -20,7 +20,7 @@ func (w compressWriter) Write(b []byte) (int, error) {
 }
 
 func WithCompress(next http.Handler) http.Handler {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
+	compressFn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "br") {
 			handleBr(w, r, next)
 			return
@@ -32,7 +32,7 @@ func WithCompress(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	}
-	return http.HandlerFunc(logFn)
+	return http.HandlerFunc(compressFn)
 }
 
 func handlegzip(w http.ResponseWriter, r *http.Request, next http.Handler) {

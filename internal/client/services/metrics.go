@@ -1,7 +1,7 @@
 package services
 
 import (
-	"log"
+	"fmt"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -13,17 +13,18 @@ import (
 )
 
 type Stat struct {
-	CounterMap  map[string]int64
-	CounterLock sync.RWMutex
-	GaugeMap    map[string]float64
-	GaugeLock   sync.RWMutex
+	CounterMap map[string]int64
+	GaugeMap   map[string]float64
+	MapLock    sync.RWMutex
 }
 
 func UpdateMetrics(stat *Stat, counter int64) {
 	ms := runtime.MemStats{}
 	runtime.ReadMemStats(&ms)
 
-	stat.GaugeLock.Lock()
+	stat.MapLock.Lock()
+	defer stat.MapLock.Unlock()
+
 	stat.GaugeMap["Alloc"] = float64(ms.Alloc)
 	stat.GaugeMap["BuckHashSys"] = float64(ms.BuckHashSys)
 	stat.GaugeMap["Frees"] = float64(ms.Frees)
@@ -53,29 +54,27 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.GaugeMap["Sys"] = float64(ms.Sys)
 	stat.GaugeMap["TotalAlloc"] = float64(ms.TotalAlloc)
 	stat.GaugeMap["RandomValue"] = rand.Float64() //nolint:gosec //rand хватает
-	stat.GaugeLock.Unlock()
-
-	stat.CounterLock.Lock()
 	stat.CounterMap["PollCount"] = counter
-	stat.CounterLock.Unlock()
 }
 
-func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
-	stat.GaugeLock.RLock()
-	for k, v := range stat.GaugeMap {
+func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
+	gaugeMap, counterMap := copyMaps(stat)
+
+	for k, v := range gaugeMap {
 		data := common.Metrics{
 			ID:    k,
 			MType: "gauge",
 			Value: &v,
 		}
+
 		out, err := easyjson.Marshal(data)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("JSON marshalling error: %w", err)
 		}
 
 		compressedOut, err := common.BrotliCompress(out)
 		if err != nil {
-			log.Printf("Ошибка при сжатии: %v", err)
+			return fmt.Errorf("data compress error: %w", err)
 		}
 
 		_, err = client.R().
@@ -86,13 +85,11 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 			Post("http://" + baseURL + "/update")
 
 		if err != nil {
-			log.Printf("Ошибка при выполнении запроса: %v", err)
+			return fmt.Errorf("error executing request: %w", err)
 		}
 	}
-	stat.GaugeLock.RUnlock()
 
-	stat.CounterLock.RLock()
-	for k, v := range stat.CounterMap {
+	for k, v := range counterMap {
 		data := common.Metrics{
 			ID:    k,
 			MType: "counter",
@@ -100,12 +97,12 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 		}
 		out, err := easyjson.Marshal(data)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("JSON marshalling error: %w", err)
 		}
 
 		compressedOut, err := common.BrotliCompress(out)
 		if err != nil {
-			log.Printf("Ошибка при сжатии: %v", err)
+			return fmt.Errorf("data compress error: %w", err)
 		}
 
 		_, err = client.R().
@@ -115,15 +112,17 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) {
 			SetBody(compressedOut).
 			Post("http://" + baseURL + "/update")
 		if err != nil {
-			log.Printf("Ошибка при выполнении запроса: %v", err)
+			return fmt.Errorf("error executing request: %w", err)
 		}
 	}
-	stat.CounterLock.RUnlock()
+
+	return nil
 }
 
-func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) {
-	stat.GaugeLock.RLock()
-	for k, v := range stat.GaugeMap {
+func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
+	gaugeMap, counterMap := copyMaps(stat)
+
+	for k, v := range gaugeMap {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
@@ -132,13 +131,11 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) {
 			}).
 			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
 		if err != nil {
-			log.Printf("Ошибка при выполнении запроса: %v", err)
+			return fmt.Errorf("error executing request: %w", err)
 		}
 	}
-	stat.GaugeLock.RUnlock()
 
-	stat.CounterLock.RLock()
-	for k, v := range stat.CounterMap {
+	for k, v := range counterMap {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
@@ -147,8 +144,23 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) {
 			}).
 			Post("http://" + baseURL + "/update/counter/{type}/{value}")
 		if err != nil {
-			log.Printf("Ошибка при выполнении запроса: %v", err)
+			return fmt.Errorf("error executing request: %w", err)
 		}
 	}
-	stat.CounterLock.RUnlock()
+
+	return nil
+}
+
+func copyMaps(stat *Stat) (map[string]float64, map[string]int64) {
+	gaugeMap := make(map[string]float64)
+	counterMap := make(map[string]int64)
+	stat.MapLock.RLock()
+	for k, v := range stat.GaugeMap {
+		gaugeMap[k] = v
+	}
+	for k, v := range stat.CounterMap {
+		counterMap[k] = v
+	}
+	stat.MapLock.RUnlock()
+	return gaugeMap, counterMap
 }
