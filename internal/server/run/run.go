@@ -26,10 +26,13 @@ type Config struct {
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DataBaseDSN     string `env:"DATABASE_DSN"`
 }
 
 func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
-	hs := handlers.HandlerSettings{}
+	hs := handlers.HandlerSettings{
+		DatabaseDSN: cfg.DataBaseDSN,
+	}
 	if cfg.StoreInterval == 0 {
 		hs.StoreToFileSync = true
 		hs.FilePath = cfg.FileStoragePath
@@ -67,6 +70,7 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 		r.Get("/counter/{name}", h.HandleGetCounter)
 	})
 
+	r.Get("/ping", h.HandlePing)
 	r.Get("/", h.HandleGetAll)
 
 	return r

@@ -3,7 +3,7 @@ package storage
 import (
 	"sync"
 
-	"github.com/Alekseyt9/ypmetrics/internal/server/dump"
+	"github.com/Alekseyt9/ypmetrics/internal/server/filedump"
 )
 
 type MemStorage struct {
@@ -33,8 +33,8 @@ type Storage interface {
 	SetGauge(name string, value float64)
 	GetGaugeAll() []NameValueGauge
 
-	LoadFromDump(dump *dump.Dump)
-	SaveToDump(dump *dump.Dump)
+	LoadFromDump(dump *filedump.FileDump)
+	SaveToDump(dump *filedump.FileDump)
 
 	SaveToFile(filePath string) error
 	LoadFromFile(filePath string) error
@@ -102,7 +102,7 @@ func (store *MemStorage) GetGaugeAll() []NameValueGauge {
 	return result
 }
 
-func (store *MemStorage) LoadFromDump(dump *dump.Dump) {
+func (store *MemStorage) LoadFromDump(dump *filedump.FileDump) {
 	store.gaugeLock.Lock()
 	defer store.gaugeLock.Unlock()
 
@@ -114,7 +114,7 @@ func (store *MemStorage) LoadFromDump(dump *dump.Dump) {
 	}
 }
 
-func (store *MemStorage) SaveToDump(dump *dump.Dump) {
+func (store *MemStorage) SaveToDump(dump *filedump.FileDump) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
@@ -130,7 +130,7 @@ func (store *MemStorage) SaveToFile(filePath string) error {
 	if filePath == "" {
 		return nil
 	}
-	dump := &dump.Dump{
+	dump := &filedump.FileDump{
 		CounterData: make(map[string]int64),
 		GaugeData:   make(map[string]float64),
 	}
@@ -142,7 +142,7 @@ func (store *MemStorage) LoadFromFile(filePath string) error {
 	if filePath == "" {
 		return nil
 	}
-	dump := &dump.Dump{}
+	dump := &filedump.FileDump{}
 	err := dump.Load(filePath)
 	if err != nil {
 		return err

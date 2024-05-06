@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 func (h *Handler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
@@ -77,4 +79,19 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		http.Error(w, "w.Write error", http.StatusBadRequest)
 	}
+}
+
+func (h *Handler) HandlePing(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, h.settings.DatabaseDSN)
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+	}
+	defer conn.Close(ctx)
+
+	err = conn.Ping(ctx)
+	if err != nil {
+		http.Error(w, "database error", http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
 }

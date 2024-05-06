@@ -1,16 +1,16 @@
-package dump
+package filedump
 
 import (
 	"encoding/json"
 	"os"
 )
 
-type Dump struct {
+type FileDump struct {
 	CounterData map[string]int64   `json:"counter"`
 	GaugeData   map[string]float64 `json:"gauge"`
 }
 
-func (dump Dump) Save(fname string) error {
+func (dump FileDump) Save(fname string) error {
 	data, err := json.MarshalIndent(dump, "", "   ")
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func (dump Dump) Save(fname string) error {
 	return os.WriteFile(fname, data, 0666) //nolint:gosec //чтобы прошли тесты
 }
 
-func (dump *Dump) Load(fname string) error {
+func (dump *FileDump) Load(fname string) error {
 	data, err := os.ReadFile(fname)
 	if err != nil {
 		return err

@@ -14,6 +14,7 @@ type Handler struct {
 type HandlerSettings struct {
 	StoreToFileSync bool // сохранять сразу после изменения значений
 	FilePath        string
+	DatabaseDSN     string
 }
 
 func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
