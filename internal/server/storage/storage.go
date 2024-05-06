@@ -1,8 +1,17 @@
 package storage
 
+import (
+	"sync"
+
+	"github.com/Alekseyt9/ypmetrics/internal/server/dump"
+)
+
 type MemStorage struct {
 	counterData map[string]int64
-	gaugeData   map[string]float64
+	counterLock sync.RWMutex
+
+	gaugeData map[string]float64
+	gaugeLock sync.RWMutex
 }
 
 type NameValueGauge struct {
@@ -23,6 +32,12 @@ type Storage interface {
 	GetGauge(name string) (float64, bool)
 	SetGauge(name string, value float64)
 	GetGaugeAll() []NameValueGauge
+
+	LoadFromDump(dump *dump.Dump)
+	SaveToDump(dump *dump.Dump)
+
+	SaveToFile(filePath string) error
+	LoadFromFile(filePath string) error
 }
 
 func NewMemStorage() *MemStorage {
@@ -33,11 +48,16 @@ func NewMemStorage() *MemStorage {
 }
 
 func (store *MemStorage) GetCounter(name string) (int64, bool) {
+	store.counterLock.RLock()
+	defer store.counterLock.RUnlock()
 	v, ok := store.counterData[name]
 	return v, ok
 }
 
 func (store *MemStorage) SetCounter(name string, value int64) {
+	store.counterLock.Lock()
+	defer store.counterLock.Unlock()
+
 	if v, ok := store.counterData[name]; ok {
 		store.counterData[name] = v + value
 		return
@@ -46,6 +66,9 @@ func (store *MemStorage) SetCounter(name string, value int64) {
 }
 
 func (store *MemStorage) GetCounterAll() []NameValueCounter {
+	store.counterLock.RLock()
+	defer store.counterLock.RUnlock()
+
 	result := make([]NameValueCounter, 0, len(store.counterData))
 	for name, value := range store.counterData {
 		result = append(result, NameValueCounter{Name: name, Value: value})
@@ -54,18 +77,76 @@ func (store *MemStorage) GetCounterAll() []NameValueCounter {
 }
 
 func (store *MemStorage) GetGauge(name string) (float64, bool) {
+	store.gaugeLock.RLock()
+	defer store.gaugeLock.RUnlock()
+
 	v, ok := store.gaugeData[name]
 	return v, ok
 }
 
 func (store *MemStorage) SetGauge(name string, value float64) {
+	store.gaugeLock.Lock()
+	defer store.gaugeLock.Unlock()
+
 	store.gaugeData[name] = value
 }
 
 func (store *MemStorage) GetGaugeAll() []NameValueGauge {
+	store.gaugeLock.RLock()
+	defer store.gaugeLock.RUnlock()
+
 	result := make([]NameValueGauge, 0, len(store.gaugeData))
 	for name, value := range store.gaugeData {
 		result = append(result, NameValueGauge{Name: name, Value: value})
 	}
 	return result
+}
+
+func (store *MemStorage) LoadFromDump(dump *dump.Dump) {
+	store.gaugeLock.Lock()
+	defer store.gaugeLock.Unlock()
+
+	for k, v := range dump.GaugeData {
+		store.gaugeData[k] = v
+	}
+	for k, v := range dump.CounterData {
+		store.counterData[k] = v
+	}
+}
+
+func (store *MemStorage) SaveToDump(dump *dump.Dump) {
+	store.gaugeLock.RLock()
+	defer store.gaugeLock.RUnlock()
+
+	for k, v := range store.gaugeData {
+		dump.GaugeData[k] = v
+	}
+	for k, v := range store.counterData {
+		dump.CounterData[k] = v
+	}
+}
+
+func (store *MemStorage) SaveToFile(filePath string) error {
+	if filePath == "" {
+		return nil
+	}
+	dump := &dump.Dump{
+		CounterData: make(map[string]int64),
+		GaugeData:   make(map[string]float64),
+	}
+	store.SaveToDump(dump)
+	return dump.Save(filePath)
+}
+
+func (store *MemStorage) LoadFromFile(filePath string) error {
+	if filePath == "" {
+		return nil
+	}
+	dump := &dump.Dump{}
+	err := dump.Load(filePath)
+	if err != nil {
+		return err
+	}
+	store.LoadFromDump(dump)
+	return nil
 }

@@ -1,51 +1,128 @@
 package services
 
 import (
-	"log"
+	"fmt"
 	"math/rand"
 	"runtime"
 	"strconv"
+	"sync"
 
+	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/go-resty/resty/v2"
+	"github.com/mailru/easyjson"
 )
 
-func UpdateMetrics(gMap map[string]float64, cMap map[string]int64, counter int64) {
-	ms := runtime.MemStats{}
-	runtime.ReadMemStats(&ms)
-	gMap["Alloc"] = float64(ms.Alloc)
-	gMap["BuckHashSys"] = float64(ms.BuckHashSys)
-	gMap["Frees"] = float64(ms.Frees)
-	gMap["BuckHashSys"] = float64(ms.BuckHashSys)
-	gMap["GCCPUFraction"] = float64(ms.GCCPUFraction)
-	gMap["GCSys"] = float64(ms.GCSys)
-	gMap["HeapAlloc"] = float64(ms.HeapAlloc)
-	gMap["HeapIdle"] = float64(ms.HeapIdle)
-	gMap["HeapInuse"] = float64(ms.HeapInuse)
-	gMap["HeapObjects"] = float64(ms.HeapObjects)
-	gMap["HeapReleased"] = float64(ms.HeapReleased)
-	gMap["HeapSys"] = float64(ms.HeapSys)
-	gMap["LastGC"] = float64(ms.LastGC)
-	gMap["Lookups"] = float64(ms.Lookups)
-	gMap["MCacheInuse"] = float64(ms.MCacheInuse)
-	gMap["MCacheSys"] = float64(ms.MCacheSys)
-	gMap["MSpanInuse"] = float64(ms.MSpanInuse)
-	gMap["MSpanSys"] = float64(ms.MSpanSys)
-	gMap["Mallocs"] = float64(ms.Mallocs)
-	gMap["NextGC"] = float64(ms.NextGC)
-	gMap["NumForcedGC"] = float64(ms.NumForcedGC)
-	gMap["NumGC"] = float64(ms.NumGC)
-	gMap["OtherSys"] = float64(ms.OtherSys)
-	gMap["PauseTotalNs"] = float64(ms.PauseTotalNs)
-	gMap["StackInuse"] = float64(ms.StackInuse)
-	gMap["StackSys"] = float64(ms.StackSys)
-	gMap["Sys"] = float64(ms.Sys)
-	gMap["TotalAlloc"] = float64(ms.TotalAlloc)
-	gMap["RandomValue"] = rand.Float64()
-	cMap["PollCount"] = counter
+type Stat struct {
+	CounterMap map[string]int64
+	GaugeMap   map[string]float64
+	MapLock    sync.RWMutex
 }
 
-func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, cMap map[string]int64) {
-	for k, v := range gMap {
+func UpdateMetrics(stat *Stat, counter int64) {
+	ms := runtime.MemStats{}
+	runtime.ReadMemStats(&ms)
+
+	stat.MapLock.Lock()
+	defer stat.MapLock.Unlock()
+
+	stat.GaugeMap["Alloc"] = float64(ms.Alloc)
+	stat.GaugeMap["BuckHashSys"] = float64(ms.BuckHashSys)
+	stat.GaugeMap["Frees"] = float64(ms.Frees)
+	stat.GaugeMap["BuckHashSys"] = float64(ms.BuckHashSys)
+	stat.GaugeMap["GCCPUFraction"] = float64(ms.GCCPUFraction)
+	stat.GaugeMap["GCSys"] = float64(ms.GCSys)
+	stat.GaugeMap["HeapAlloc"] = float64(ms.HeapAlloc)
+	stat.GaugeMap["HeapIdle"] = float64(ms.HeapIdle)
+	stat.GaugeMap["HeapInuse"] = float64(ms.HeapInuse)
+	stat.GaugeMap["HeapObjects"] = float64(ms.HeapObjects)
+	stat.GaugeMap["HeapReleased"] = float64(ms.HeapReleased)
+	stat.GaugeMap["HeapSys"] = float64(ms.HeapSys)
+	stat.GaugeMap["LastGC"] = float64(ms.LastGC)
+	stat.GaugeMap["Lookups"] = float64(ms.Lookups)
+	stat.GaugeMap["MCacheInuse"] = float64(ms.MCacheInuse)
+	stat.GaugeMap["MCacheSys"] = float64(ms.MCacheSys)
+	stat.GaugeMap["MSpanInuse"] = float64(ms.MSpanInuse)
+	stat.GaugeMap["MSpanSys"] = float64(ms.MSpanSys)
+	stat.GaugeMap["Mallocs"] = float64(ms.Mallocs)
+	stat.GaugeMap["NextGC"] = float64(ms.NextGC)
+	stat.GaugeMap["NumForcedGC"] = float64(ms.NumForcedGC)
+	stat.GaugeMap["NumGC"] = float64(ms.NumGC)
+	stat.GaugeMap["OtherSys"] = float64(ms.OtherSys)
+	stat.GaugeMap["PauseTotalNs"] = float64(ms.PauseTotalNs)
+	stat.GaugeMap["StackInuse"] = float64(ms.StackInuse)
+	stat.GaugeMap["StackSys"] = float64(ms.StackSys)
+	stat.GaugeMap["Sys"] = float64(ms.Sys)
+	stat.GaugeMap["TotalAlloc"] = float64(ms.TotalAlloc)
+	stat.GaugeMap["RandomValue"] = rand.Float64() //nolint:gosec //rand хватает
+	stat.CounterMap["PollCount"] = counter
+}
+
+func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
+	gaugeMap, counterMap := copyMaps(stat)
+
+	for k, v := range gaugeMap {
+		data := common.Metrics{
+			ID:    k,
+			MType: "gauge",
+			Value: &v,
+		}
+
+		out, err := easyjson.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("JSON marshalling error: %w", err)
+		}
+
+		compressedOut, err := common.BrotliCompress(out)
+		if err != nil {
+			return fmt.Errorf("data compress error: %w", err)
+		}
+
+		_, err = client.R().
+			SetHeader("Content-Type", "Content-Type: application/json").
+			SetHeader("Content-Encoding", "br").
+			SetHeader("Accept-Encoding", "br").
+			SetBody(compressedOut).
+			Post("http://" + baseURL + "/update")
+
+		if err != nil {
+			return fmt.Errorf("error executing request: %w", err)
+		}
+	}
+
+	for k, v := range counterMap {
+		data := common.Metrics{
+			ID:    k,
+			MType: "counter",
+			Delta: &v,
+		}
+		out, err := easyjson.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("JSON marshalling error: %w", err)
+		}
+
+		compressedOut, err := common.BrotliCompress(out)
+		if err != nil {
+			return fmt.Errorf("data compress error: %w", err)
+		}
+
+		_, err = client.R().
+			SetHeader("Content-Type", "Content-Type: application/json").
+			SetHeader("Content-Encoding", "br").
+			SetHeader("Accept-Encoding", "br").
+			SetBody(compressedOut).
+			Post("http://" + baseURL + "/update")
+		if err != nil {
+			return fmt.Errorf("error executing request: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
+	gaugeMap, counterMap := copyMaps(stat)
+
+	for k, v := range gaugeMap {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
@@ -54,11 +131,11 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 			}).
 			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
 		if err != nil {
-			log.Printf("Ошибка при выполнении запроса: %v", err)
+			return fmt.Errorf("error executing request: %w", err)
 		}
 	}
 
-	for k, v := range cMap {
+	for k, v := range counterMap {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
@@ -67,7 +144,23 @@ func SendMetrics(client *resty.Client, baseURL string, gMap map[string]float64, 
 			}).
 			Post("http://" + baseURL + "/update/counter/{type}/{value}")
 		if err != nil {
-			log.Printf("Ошибка при выполнении запроса: %v", err)
+			return fmt.Errorf("error executing request: %w", err)
 		}
 	}
+
+	return nil
+}
+
+func copyMaps(stat *Stat) (map[string]float64, map[string]int64) {
+	gaugeMap := make(map[string]float64)
+	counterMap := make(map[string]int64)
+	stat.MapLock.RLock()
+	for k, v := range stat.GaugeMap {
+		gaugeMap[k] = v
+	}
+	for k, v := range stat.CounterMap {
+		counterMap[k] = v
+	}
+	stat.MapLock.RUnlock()
+	return gaugeMap, counterMap
 }

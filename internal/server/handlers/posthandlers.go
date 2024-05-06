@@ -17,6 +17,8 @@ func (h *Handler) HandleGauge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.store.SetGauge(name, gaugeValue)
+	h.StoreToFile()
+
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -30,6 +32,8 @@ func (h *Handler) HandleCounter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.store.SetCounter(name, counterValue)
+	h.StoreToFile()
+
 	w.WriteHeader(http.StatusOK)
 }
 

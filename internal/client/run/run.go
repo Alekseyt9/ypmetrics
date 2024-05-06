@@ -1,6 +1,11 @@
 package run
 
 import (
+	"log"
+	"os"
+	"os/signal"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
@@ -16,25 +21,34 @@ type Config struct {
 func Run(cfg *Config) {
 	pollInterval := cfg.PollInterval
 	reportInterval := cfg.ReportInterval
-
-	var interval int64
 	var counter int64
-	gMap := make(map[string]float64)
-	cMap := make(map[string]int64)
+
+	stat := &services.Stat{
+		CounterMap: make(map[string]int64),
+		GaugeMap:   make(map[string]float64),
+	}
 	client := resty.New()
 
-	for {
-		if interval%int64(pollInterval) == 0 {
-			services.UpdateMetrics(gMap, cMap, counter)
-			counter++
+	go func() {
+		for {
+			services.UpdateMetrics(stat, counter)
+			atomic.AddInt64(&counter, 1)
+			time.Sleep(time.Duration(pollInterval) * time.Second)
 		}
+	}()
 
-		if interval%int64(reportInterval) == 0 {
-			services.SendMetrics(client, cfg.Address, gMap, cMap)
-			counter = 0
+	go func() {
+		for {
+			err := services.SendMetricsJSON(client, cfg.Address, stat)
+			if err != nil {
+				log.Print(err)
+			}
+			atomic.StoreInt64(&counter, 0)
+			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}
+	}()
 
-		interval++
-		time.Sleep(1 * time.Second)
-	}
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	<-signals
 }

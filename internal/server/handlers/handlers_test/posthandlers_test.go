@@ -28,10 +28,11 @@ func (suite *TestSuite) TestRouterPost() {
 		url    string
 		status int
 	}{
-		{
-			url:    "/update",
-			status: http.StatusBadRequest,
-		},
+		/*
+			{
+				url:    "/update",
+				status: http.StatusBadRequest,
+			},*/ // not actual after iter 7
 		{
 			url:    "/update/unknown/",
 			status: http.StatusBadRequest,
