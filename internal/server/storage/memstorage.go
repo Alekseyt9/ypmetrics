@@ -27,7 +27,7 @@ func (store *MemStorage) GetCounter(ctx context.Context, name string) (int64, er
 	defer store.counterLock.RUnlock()
 	v, ok := store.counterData[name]
 	if !ok {
-		return 0, nil
+		return 0, ErrNotFound
 	}
 	return v, nil
 }
@@ -61,7 +61,7 @@ func (store *MemStorage) GetGauge(ctx context.Context, name string) (float64, er
 
 	v, ok := store.gaugeData[name]
 	if !ok {
-		return 0, nil
+		return 0, ErrNotFound
 	}
 	return v, nil
 }

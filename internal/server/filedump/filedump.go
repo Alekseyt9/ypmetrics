@@ -3,7 +3,10 @@ package filedump
 import (
 	"encoding/json"
 	"os"
+	"sync"
 )
+
+var mutex sync.Mutex
 
 type FileDump struct {
 	CounterData map[string]int64   `json:"counter"`
@@ -15,6 +18,10 @@ func (dump FileDump) Save(fname string) error {
 	if err != nil {
 		return err
 	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	return os.WriteFile(fname, data, 0666) //nolint:gosec //чтобы прошли тесты
 }
 

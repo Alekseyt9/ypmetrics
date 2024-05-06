@@ -1,6 +1,11 @@
 package storage
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrNotFound = errors.New("not found")
 
 type NameValueGauge struct {
 	Name  string

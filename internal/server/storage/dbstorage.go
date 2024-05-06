@@ -3,25 +3,31 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 )
 
-type DbStorage struct {
+type DBStorage struct {
 	conn *sql.DB
 }
 
-func NewDbStorage(conn *sql.DB) *DbStorage {
-	return &DbStorage{
+func NewDBStorage(conn *sql.DB) *DBStorage {
+	return &DBStorage{
 		conn: conn,
 	}
 }
 
-func (store *DbStorage) GetCounter(ctx context.Context, name string) (value int64, err error) {
+func (store *DBStorage) GetCounter(ctx context.Context, name string) (value int64, err error) {
 	row := store.conn.QueryRowContext(ctx, `SELECT value FROM counters WHERE name = $1`, name)
 	err = row.Scan(&value)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrNotFound
+	}
+
 	return
 }
 
-func (store *DbStorage) SetCounter(ctx context.Context, name string, value int64) (err error) {
+func (store *DBStorage) SetCounter(ctx context.Context, name string, value int64) (err error) {
 	_, err = store.conn.ExecContext(ctx, `
 		insert into counters(name, value)
 		values ($1, $2)
@@ -31,7 +37,7 @@ func (store *DbStorage) SetCounter(ctx context.Context, name string, value int64
 	return
 }
 
-func (store *DbStorage) GetCounterAll(ctx context.Context) (res []NameValueCounter, err error) {
+func (store *DBStorage) GetCounterAll(ctx context.Context) (res []NameValueCounter, err error) {
 	res = []NameValueCounter{}
 	var rows *sql.Rows
 	rows, err = store.conn.QueryContext(ctx, "select name, value from counters")
@@ -47,16 +53,26 @@ func (store *DbStorage) GetCounterAll(ctx context.Context) (res []NameValueCount
 		}
 		res = append(res, r)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return res, nil
 }
 
-func (store *DbStorage) GetGauge(ctx context.Context, name string) (value float64, err error) {
+func (store *DBStorage) GetGauge(ctx context.Context, name string) (value float64, err error) {
 	row := store.conn.QueryRowContext(ctx, `SELECT value FROM gauges WHERE name = $1`, name)
 	err = row.Scan(&value)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrNotFound
+	}
+
 	return
 }
 
-func (store *DbStorage) SetGauge(ctx context.Context, name string, value float64) (err error) {
+func (store *DBStorage) SetGauge(ctx context.Context, name string, value float64) (err error) {
 	_, err = store.conn.ExecContext(ctx, `
 		insert into gauges(name, value)
 		values ($1, $2)
@@ -66,7 +82,7 @@ func (store *DbStorage) SetGauge(ctx context.Context, name string, value float64
 	return
 }
 
-func (store *DbStorage) GetGaugeAll(ctx context.Context) (res []NameValueGauge, err error) {
+func (store *DBStorage) GetGaugeAll(ctx context.Context) (res []NameValueGauge, err error) {
 	res = []NameValueGauge{}
 	var rows *sql.Rows
 	rows, err = store.conn.QueryContext(ctx, "select name, value from gauges")
@@ -82,10 +98,15 @@ func (store *DbStorage) GetGaugeAll(ctx context.Context) (res []NameValueGauge, 
 		}
 		res = append(res, r)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return res, nil
 }
 
-func (store *DbStorage) Bootstrap(ctx context.Context) error {
+func (store *DBStorage) Bootstrap(ctx context.Context) error {
 	tx, err := store.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err

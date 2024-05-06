@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/mailru/easyjson"
 )
 
@@ -48,6 +50,9 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 
 		v, err := h.store.GetGauge(r.Context(), data.ID)
 		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				http.Error(w, "metric not found", http.StatusNotFound)
+			}
 			http.Error(w, "error GetGauge", http.StatusBadRequest)
 		}
 		restData.Value = &v
@@ -114,14 +119,22 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	case "gauge":
 		v, err := h.store.GetGauge(r.Context(), data.ID)
 		if err != nil {
-			http.Error(w, "error GetGauge", http.StatusBadRequest)
+			if errors.Is(err, storage.ErrNotFound) {
+				v = 0
+			} else {
+				http.Error(w, "error GetGauge", http.StatusBadRequest)
+			}
 		}
 		restData.Value = &v
 
 	case "counter":
 		v, err := h.store.GetCounter(r.Context(), data.ID)
 		if err != nil {
-			http.Error(w, "error GetCounter", http.StatusBadRequest)
+			if errors.Is(err, storage.ErrNotFound) {
+				v = 0
+			} else {
+				http.Error(w, "error GetCounter", http.StatusBadRequest)
+			}
 		}
 		restData.Delta = &v
 	}

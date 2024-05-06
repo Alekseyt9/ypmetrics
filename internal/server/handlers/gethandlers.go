@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 )
@@ -16,6 +18,9 @@ func (h *Handler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
 
 	v, err := h.store.GetGauge(r.Context(), name)
 	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			http.Error(w, "metric not found", http.StatusNotFound)
+		}
 		http.Error(w, "error GetGauge", http.StatusBadRequest)
 	}
 
@@ -23,11 +28,6 @@ func (h *Handler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "io.WriteString error", http.StatusBadRequest)
 	}
-	/*
-		} else {
-			http.Error(w, "metric not found", http.StatusNotFound)
-		}
-	*/
 }
 
 func (h *Handler) HandleGetCounter(w http.ResponseWriter, r *http.Request) {
@@ -35,6 +35,9 @@ func (h *Handler) HandleGetCounter(w http.ResponseWriter, r *http.Request) {
 
 	v, err := h.store.GetCounter(r.Context(), name)
 	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			http.Error(w, "metric not found", http.StatusNotFound)
+		}
 		http.Error(w, "error GetGauge", http.StatusBadRequest)
 	}
 
