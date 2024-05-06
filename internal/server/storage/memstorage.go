@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 
 	"github.com/Alekseyt9/ypmetrics/internal/server/filedump"
@@ -14,58 +15,36 @@ type MemStorage struct {
 	gaugeLock sync.RWMutex
 }
 
-type NameValueGauge struct {
-	Name  string
-	Value float64
-}
-
-type NameValueCounter struct {
-	Name  string
-	Value int64
-}
-
-type Storage interface {
-	GetCounter(name string) (int64, bool)
-	SetCounter(name string, value int64)
-	GetCounterAll() []NameValueCounter
-
-	GetGauge(name string) (float64, bool)
-	SetGauge(name string, value float64)
-	GetGaugeAll() []NameValueGauge
-
-	LoadFromDump(dump *filedump.FileDump)
-	SaveToDump(dump *filedump.FileDump)
-
-	SaveToFile(filePath string) error
-	LoadFromFile(filePath string) error
-}
-
-func NewMemStorage() *MemStorage {
+func NewMemStorage() Storage {
 	return &MemStorage{
 		counterData: make(map[string]int64),
 		gaugeData:   make(map[string]float64),
 	}
 }
 
-func (store *MemStorage) GetCounter(name string) (int64, bool) {
+func (store *MemStorage) GetCounter(ctx context.Context, name string) (int64, error) {
 	store.counterLock.RLock()
 	defer store.counterLock.RUnlock()
 	v, ok := store.counterData[name]
-	return v, ok
+	if !ok {
+		return 0, nil
+	}
+	return v, nil
 }
 
-func (store *MemStorage) SetCounter(name string, value int64) {
+func (store *MemStorage) SetCounter(ctx context.Context, name string, value int64) error {
 	store.counterLock.Lock()
 	defer store.counterLock.Unlock()
 
 	if v, ok := store.counterData[name]; ok {
 		store.counterData[name] = v + value
-		return
+		return nil
 	}
 	store.counterData[name] = value
+	return nil
 }
 
-func (store *MemStorage) GetCounterAll() []NameValueCounter {
+func (store *MemStorage) GetCounterAll(ctx context.Context) ([]NameValueCounter, error) {
 	store.counterLock.RLock()
 	defer store.counterLock.RUnlock()
 
@@ -73,25 +52,29 @@ func (store *MemStorage) GetCounterAll() []NameValueCounter {
 	for name, value := range store.counterData {
 		result = append(result, NameValueCounter{Name: name, Value: value})
 	}
-	return result
+	return result, nil
 }
 
-func (store *MemStorage) GetGauge(name string) (float64, bool) {
+func (store *MemStorage) GetGauge(ctx context.Context, name string) (float64, error) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
 	v, ok := store.gaugeData[name]
-	return v, ok
+	if !ok {
+		return 0, nil
+	}
+	return v, nil
 }
 
-func (store *MemStorage) SetGauge(name string, value float64) {
+func (store *MemStorage) SetGauge(ctx context.Context, name string, value float64) error {
 	store.gaugeLock.Lock()
 	defer store.gaugeLock.Unlock()
 
 	store.gaugeData[name] = value
+	return nil
 }
 
-func (store *MemStorage) GetGaugeAll() []NameValueGauge {
+func (store *MemStorage) GetGaugeAll(ctx context.Context) ([]NameValueGauge, error) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
@@ -99,7 +82,7 @@ func (store *MemStorage) GetGaugeAll() []NameValueGauge {
 	for name, value := range store.gaugeData {
 		result = append(result, NameValueGauge{Name: name, Value: value})
 	}
-	return result
+	return result, nil
 }
 
 func (store *MemStorage) LoadFromDump(dump *filedump.FileDump) {

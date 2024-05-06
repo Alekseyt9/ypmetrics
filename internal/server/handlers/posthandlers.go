@@ -16,7 +16,7 @@ func (h *Handler) HandleGauge(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "incorrect metric value", http.StatusBadRequest)
 	}
 
-	h.store.SetGauge(name, gaugeValue)
+	h.store.SetGauge(r.Context(), name, gaugeValue)
 	h.StoreToFile()
 
 	w.WriteHeader(http.StatusOK)
@@ -31,7 +31,7 @@ func (h *Handler) HandleCounter(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "incorrect metric value", http.StatusBadRequest)
 	}
 
-	h.store.SetCounter(name, counterValue)
+	h.store.SetCounter(r.Context(), name, counterValue)
 	h.StoreToFile()
 
 	w.WriteHeader(http.StatusOK)

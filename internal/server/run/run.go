@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
@@ -77,13 +79,30 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 }
 
 func Run(cfg *Config) error {
-	store := storage.NewMemStorage()
+	var store storage.Storage
 	logger := logger.NewSlogLogger()
 
-	if cfg.Restore && cfg.FileStoragePath != "" {
-		err := store.LoadFromFile(cfg.FileStoragePath)
+	if cfg.DataBaseDSN != "" {
+		db, err := sql.Open("pgx", cfg.DataBaseDSN)
 		if err != nil {
-			logger.Info("Load from file", "error", err)
+			return err
+		}
+		dbstore := storage.NewDbStorage(db)
+		err = dbstore.Bootstrap(context.Background())
+		if err != nil {
+			logger.Error("Database has already initialized")
+		}
+		store = dbstore
+	} else {
+		store = storage.NewMemStorage()
+	}
+
+	if cfg.Restore && cfg.FileStoragePath != "" {
+		if memStore, ok := store.(*storage.MemStorage); ok {
+			err := memStore.LoadFromFile(cfg.FileStoragePath)
+			if err != nil {
+				logger.Info("Load from file", "error", err)
+			}
 		}
 	}
 
@@ -100,10 +119,12 @@ func Run(cfg *Config) error {
 	if cfg.StoreInterval > 0 {
 		go func() {
 			for {
-				if err := store.SaveToFile(cfg.FileStoragePath); err != nil {
-					logger.Info("Save to dump", "error", err)
+				if memStore, ok := store.(*storage.MemStorage); ok {
+					if err := memStore.SaveToFile(cfg.FileStoragePath); err != nil {
+						logger.Info("Save to dump", "error", err)
+					}
+					time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 				}
-				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 			}
 		}()
 	}
@@ -113,8 +134,10 @@ func Run(cfg *Config) error {
 	go func() {
 		<-sigs
 
-		if err := store.SaveToFile(cfg.FileStoragePath); err != nil {
-			logger.Info("Save to dump", "error", err)
+		if memStore, ok := store.(*storage.MemStorage); ok {
+			if err := memStore.SaveToFile(cfg.FileStoragePath); err != nil {
+				logger.Info("Save to dump", "error", err)
+			}
 		}
 
 		if err := server.Shutdown(context.Background()); err != nil {

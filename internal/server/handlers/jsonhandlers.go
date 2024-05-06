@@ -21,13 +21,6 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
-	if strings.Contains(r.Header.Get("Content-Encoding"), "br") {
-		body, err = common.BrotliDecompress(body)
-		if err != nil {
-			http.Error(w, "error decompress brodli", http.StatusBadRequest)
-		}
-	}
-
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		body, err = common.GZIPDecompress(body)
 		if err != nil {
@@ -48,23 +41,28 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 
 	switch data.MType {
 	case "gauge":
-		h.store.SetGauge(data.ID, *data.Value)
-		v, b := h.store.GetGauge(data.ID)
-		if b {
-			restData.Value = &v
-		} else {
-			var z float64
-			restData.Value = &z
+		err := h.store.SetGauge(r.Context(), data.ID, *data.Value)
+		if err != nil {
+			http.Error(w, "error SetGauge", http.StatusBadRequest)
 		}
+
+		v, err := h.store.GetGauge(r.Context(), data.ID)
+		if err != nil {
+			http.Error(w, "error GetGauge", http.StatusBadRequest)
+		}
+		restData.Value = &v
+
 	case "counter":
-		h.store.SetCounter(data.ID, *data.Delta)
-		v, b := h.store.GetCounter(data.ID)
-		if b {
-			restData.Delta = &v
-		} else {
-			var z int64
-			restData.Delta = &z
+		err := h.store.SetCounter(r.Context(), data.ID, *data.Delta)
+		if err != nil {
+			http.Error(w, "error SetCounter", http.StatusBadRequest)
 		}
+
+		v, err := h.store.GetCounter(r.Context(), data.ID)
+		if err != nil {
+			http.Error(w, "error GetCounter", http.StatusBadRequest)
+		}
+		restData.Delta = &v
 	}
 
 	h.StoreToFile()
@@ -94,17 +92,10 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
-	if strings.Contains(r.Header.Get("Content-Encoding"), "br") {
-		body, err = common.BrotliDecompress(body)
-		if err != nil {
-			http.Error(w, "error decompress brodli", http.StatusBadRequest)
-		}
-	}
-
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		body, err = common.GZIPDecompress(body)
 		if err != nil {
-			http.Error(w, "error decompress gzip", http.StatusBadRequest)
+			http.Error(w, "error decompress GZIP", http.StatusBadRequest)
 		}
 	}
 
@@ -121,21 +112,18 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 
 	switch data.MType {
 	case "gauge":
-		v, b := h.store.GetGauge(data.ID)
-		if b {
-			restData.Value = &v
-		} else {
-			var z float64
-			restData.Value = &z
+		v, err := h.store.GetGauge(r.Context(), data.ID)
+		if err != nil {
+			http.Error(w, "error GetGauge", http.StatusBadRequest)
 		}
+		restData.Value = &v
+
 	case "counter":
-		v, b := h.store.GetCounter(data.ID)
-		if b {
-			restData.Delta = &v
-		} else {
-			var z int64
-			restData.Delta = &z
+		v, err := h.store.GetCounter(r.Context(), data.ID)
+		if err != nil {
+			http.Error(w, "error GetCounter", http.StatusBadRequest)
 		}
+		restData.Delta = &v
 	}
 
 	w.Header().Set("Content-Type", "application/json")

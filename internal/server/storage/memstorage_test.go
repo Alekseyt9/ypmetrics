@@ -1,6 +1,7 @@
 package storage_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
@@ -41,12 +42,13 @@ func TestGaugeStorage(t *testing.T) {
 	}
 
 	store := storage.NewMemStorage()
+	ctx := context.Background()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			store.SetGauge(test.metric, test.set)
-			v, ok := store.GetGauge(test.metric)
-			assert.True(t, ok)
+			store.SetGauge(ctx, test.metric, test.set)
+			v, err := store.GetGauge(ctx, test.metric)
+			assert.NoError(t, err)
 			assert.InDelta(t, test.want, v, 0.01)
 		})
 	}
@@ -86,12 +88,13 @@ func TestCounterStorage(t *testing.T) {
 	}
 
 	store := storage.NewMemStorage()
+	ctx := context.Background()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			store.SetCounter(test.metric, test.set)
-			v, ok := store.GetCounter(test.metric)
-			assert.True(t, ok)
+			store.SetCounter(ctx, test.metric, test.set)
+			v, err := store.GetCounter(ctx, test.metric)
+			assert.NoError(t, err)
 			assert.InDelta(t, test.want, v, 0.01)
 		})
 	}

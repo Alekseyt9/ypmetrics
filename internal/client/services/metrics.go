@@ -72,15 +72,15 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 			return fmt.Errorf("JSON marshalling error: %w", err)
 		}
 
-		compressedOut, err := common.BrotliCompress(out)
+		compressedOut, err := common.GZIPCompress(out)
 		if err != nil {
 			return fmt.Errorf("data compress error: %w", err)
 		}
 
 		_, err = client.R().
 			SetHeader("Content-Type", "Content-Type: application/json").
-			SetHeader("Content-Encoding", "br").
-			SetHeader("Accept-Encoding", "br").
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Accept-Encoding", "gzip").
 			SetBody(compressedOut).
 			Post("http://" + baseURL + "/update")
 
@@ -100,15 +100,15 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 			return fmt.Errorf("JSON marshalling error: %w", err)
 		}
 
-		compressedOut, err := common.BrotliCompress(out)
+		compressedOut, err := common.GZIPCompress(out)
 		if err != nil {
 			return fmt.Errorf("data compress error: %w", err)
 		}
 
 		_, err = client.R().
 			SetHeader("Content-Type", "Content-Type: application/json").
-			SetHeader("Content-Encoding", "br").
-			SetHeader("Accept-Encoding", "br").
+			SetHeader("Content-Encoding", "gzip").
+			SetHeader("Accept-Encoding", "gzip").
 			SetBody(compressedOut).
 			Post("http://" + baseURL + "/update")
 		if err != nil {
