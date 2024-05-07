@@ -171,23 +171,25 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	var data common.MetricsBatch
+	var data common.MetricsSlice
 	err = easyjson.Unmarshal(body, &data)
 	if err != nil {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
 	}
 
-	err = h.store.SetCounters(r.Context(), data.Counters)
+	metricsItems := data.ToMetricItems()
+
+	err = h.store.SetCounters(r.Context(), metricsItems.Counters)
 	if err != nil {
 		http.Error(w, "error SetCounters", http.StatusBadRequest)
 	}
 
-	err = h.store.SetGauges(r.Context(), data.Gauges)
+	err = h.store.SetGauges(r.Context(), metricsItems.Gauges)
 	if err != nil {
 		http.Error(w, "error SetGauges", http.StatusBadRequest)
 	}
 
-	resData := common.MetricsBatch{
+	resData := common.MetricItems{
 		Counters: make([]common.CounterItem, 0),
 		Gauges:   make([]common.GaugeItem, 0),
 	}
@@ -205,7 +207,7 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	out, err := easyjson.Marshal(resData)
+	out, err := easyjson.Marshal(resData.ToMetricsSlice())
 	if err != nil {
 		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
 	}

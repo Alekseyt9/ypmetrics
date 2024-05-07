@@ -7,7 +7,7 @@ import (
 )
 
 type Stat struct {
-	Data *common.MetricsBatch
+	Data *common.MetricItems
 	Lock sync.RWMutex
 }
 

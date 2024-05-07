@@ -1,0 +1,48 @@
+package common
+
+type CounterItem struct {
+	Name  string
+	Value int64
+}
+
+type GaugeItem struct {
+	Name  string
+	Value float64
+}
+
+type MetricItems struct {
+	Counters []CounterItem
+	Gauges   []GaugeItem
+}
+
+func (s MetricsSlice) ToMetricItems() MetricItems {
+	res := MetricItems{
+		Counters: make([]CounterItem, 0),
+		Gauges:   make([]GaugeItem, 0),
+	}
+
+	for _, item := range s {
+		switch item.MType {
+		case "gauge":
+			res.Gauges = append(res.Gauges, GaugeItem{Name: item.ID, Value: *item.Value})
+		case "counter":
+			res.Counters = append(res.Counters, CounterItem{Name: item.ID, Value: *item.Delta})
+		}
+	}
+
+	return res
+}
+
+func (s MetricItems) ToMetricsSlice() MetricsSlice {
+	res := make([]Metrics, 0)
+
+	for _, item := range s.Counters {
+		res = append(res, Metrics{ID: item.Name, MType: "counter", Delta: &item.Value})
+	}
+
+	for _, item := range s.Gauges {
+		res = append(res, Metrics{ID: item.Name, MType: "gauge", Value: &item.Value})
+	}
+
+	return res
+}

@@ -58,7 +58,7 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 		return nil
 	}
 
-	copy := copyStat(stat)
+	copy := stat.Data.ToMetricsSlice()
 	out, err := easyjson.Marshal(copy)
 	if err != nil {
 		return fmt.Errorf("JSON marshalling error: %w", err)
@@ -177,8 +177,8 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 	return nil
 }
 
-func copyStat(stat *Stat) common.MetricsBatch {
-	copy := common.MetricsBatch{
+func copyStat(stat *Stat) common.MetricItems {
+	copy := common.MetricItems{
 		Counters: make([]common.CounterItem, 0, len(stat.Data.Counters)),
 		Gauges:   make([]common.GaugeItem, 0, len(stat.Data.Counters)),
 	}

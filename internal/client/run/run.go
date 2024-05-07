@@ -25,7 +25,7 @@ func Run(cfg *Config) {
 	var counter int64
 
 	stat := &services.Stat{
-		Data: &common.MetricsBatch{
+		Data: &common.MetricItems{
 			Counters: make([]common.CounterItem, 0),
 			Gauges:   make([]common.GaugeItem, 0),
 		},
