@@ -15,8 +15,8 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	ms := runtime.MemStats{}
 	runtime.ReadMemStats(&ms)
 
-	stat.MapLock.Lock()
-	defer stat.MapLock.Unlock()
+	stat.Lock.Lock()
+	defer stat.Lock.Unlock()
 
 	stat.AddGauge("Alloc", float64(ms.Alloc))
 	stat.AddGauge("BuckHashSys", float64(ms.BuckHashSys))
@@ -50,14 +50,39 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.AddCounter("PollCount", counter)
 }
 
-func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
-	gauges, counters := copyStat(stat)
+func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
+	copy := copyStat(stat)
+	out, err := easyjson.Marshal(copy)
+	if err != nil {
+		return fmt.Errorf("JSON marshalling error: %w", err)
+	}
+	compressedOut, err := common.GZIPCompress(out)
+	if err != nil {
+		return fmt.Errorf("data compress error: %w", err)
+	}
 
-	for _, item := range gauges {
+	_, err = client.R().
+		SetHeader("Content-Type", "Content-Type: application/json").
+		SetHeader("Content-Encoding", "gzip").
+		SetHeader("Accept-Encoding", "gzip").
+		SetBody(compressedOut).
+		Post("http://" + baseURL + "/update")
+
+	if err != nil {
+		return fmt.Errorf("error executing request: %w", err)
+	}
+
+	return nil
+}
+
+func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
+	copy := copyStat(stat)
+
+	for _, item := range copy.Gauges {
 		data := common.Metrics{
-			ID:    item.name,
+			ID:    item.Name,
 			MType: "gauge",
-			Value: &item.value,
+			Value: &item.Value,
 		}
 
 		out, err := easyjson.Marshal(data)
@@ -82,11 +107,11 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 		}
 	}
 
-	for _, item := range counters {
+	for _, item := range copy.Counters {
 		data := common.Metrics{
-			ID:    item.name,
+			ID:    item.Name,
 			MType: "counter",
-			Delta: &item.value,
+			Delta: &item.Value,
 		}
 		out, err := easyjson.Marshal(data)
 		if err != nil {
@@ -113,14 +138,14 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 }
 
 func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
-	gauges, counters := copyStat(stat)
+	copy := copyStat(stat)
 
-	for _, item := range gauges {
+	for _, item := range copy.Gauges {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
-				"type":  item.name,
-				"value": strconv.FormatFloat(item.value, 'f', -1, 64),
+				"type":  item.Name,
+				"value": strconv.FormatFloat(item.Value, 'f', -1, 64),
 			}).
 			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
 		if err != nil {
@@ -128,12 +153,12 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 		}
 	}
 
-	for _, item := range counters {
+	for _, item := range copy.Counters {
 		_, err := client.R().
 			SetHeader("Content-Type", "Content-Type: text/plain").
 			SetPathParams(map[string]string{
-				"type":  item.name,
-				"value": strconv.FormatInt(item.value, 10),
+				"type":  item.Name,
+				"value": strconv.FormatInt(item.Value, 10),
 			}).
 			Post("http://" + baseURL + "/update/counter/{type}/{value}")
 		if err != nil {
@@ -144,16 +169,20 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 	return nil
 }
 
-func copyStat(stat *Stat) ([]GaugeItem, []CounterItem) {
-	gauges := make([]GaugeItem, len(stat.Gauges))
-	counters := make([]CounterItem, len(stat.Counters))
-	stat.MapLock.RLock()
-	for _, item := range stat.Gauges {
-		gauges = append(gauges, GaugeItem{name: item.name, value: item.value})
+func copyStat(stat *Stat) common.MetricsBatch {
+	copy := common.MetricsBatch{
+		Counters: make([]common.CounterItem, 1),
+		Gauges:   make([]common.GaugeItem, 10),
 	}
-	for _, item := range stat.Counters {
-		counters = append(counters, CounterItem{name: item.name, value: item.value})
+
+	stat.Lock.RLock()
+	for _, item := range stat.Data.Gauges {
+		copy.Gauges = append(copy.Gauges, common.GaugeItem{Name: item.Name, Value: item.Value})
 	}
-	stat.MapLock.RUnlock()
-	return gauges, counters
+	for _, item := range stat.Data.Counters {
+		copy.Counters = append(copy.Counters, common.CounterItem{Name: item.Name, Value: item.Value})
+	}
+	stat.Lock.RUnlock()
+
+	return copy
 }

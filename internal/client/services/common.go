@@ -1,43 +1,36 @@
 package services
 
-import "sync"
+import (
+	"sync"
 
-type GaugeItem struct {
-	name  string
-	value float64
-}
-
-type CounterItem struct {
-	name  string
-	value int64
-}
+	"github.com/Alekseyt9/ypmetrics/internal/common"
+)
 
 type Stat struct {
-	Counters []CounterItem
-	Gauges   []GaugeItem
-	MapLock  sync.RWMutex
+	Data *common.MetricsBatch
+	Lock sync.RWMutex
 }
 
 func (s *Stat) AddGauge(name string, value float64) {
-	s.Gauges = append(s.Gauges, GaugeItem{name: name, value: value})
+	s.Data.Gauges = append(s.Data.Gauges, common.GaugeItem{Name: name, Value: value})
 }
 
 func (s *Stat) AddCounter(name string, value int64) {
-	s.Counters = append(s.Counters, CounterItem{name: name, value: value})
+	s.Data.Counters = append(s.Data.Counters, common.CounterItem{Name: name, Value: value})
 }
 
-func (s *Stat) FindGauge(name string) (*GaugeItem, bool) {
-	for _, item := range s.Gauges {
-		if item.name == name {
+func (s *Stat) FindGauge(name string) (*common.GaugeItem, bool) {
+	for _, item := range s.Data.Gauges {
+		if item.Name == name {
 			return &item, true
 		}
 	}
 	return nil, false
 }
 
-func (s *Stat) FindCounter(name string) (*CounterItem, bool) {
-	for _, item := range s.Counters {
-		if item.name == name {
+func (s *Stat) FindCounter(name string) (*common.CounterItem, bool) {
+	for _, item := range s.Data.Counters {
+		if item.Name == name {
 			return &item, true
 		}
 	}

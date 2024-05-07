@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -24,8 +25,10 @@ func Run(cfg *Config) {
 	var counter int64
 
 	stat := &services.Stat{
-		Counters: make([]services.CounterItem, 1),
-		Gauges:   make([]services.GaugeItem, 10),
+		Data: &common.MetricsBatch{
+			Counters: make([]common.CounterItem, 1),
+			Gauges:   make([]common.GaugeItem, 10),
+		},
 	}
 	client := resty.New()
 
@@ -39,7 +42,7 @@ func Run(cfg *Config) {
 
 	go func() {
 		for {
-			err := services.SendMetricsJSON(client, cfg.Address, stat)
+			err := services.SendMetricsBatch(client, cfg.Address, stat)
 			if err != nil {
 				log.Print(err)
 			}
