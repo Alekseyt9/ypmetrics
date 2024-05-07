@@ -10,8 +10,8 @@ import (
 func TestUpdateMetrics(t *testing.T) {
 	var counter int64
 	stat := &services.Stat{
-		CounterMap: make(map[string]int64),
-		GaugeMap:   make(map[string]float64),
+		Counters: make([]services.CounterItem, 1),
+		Gauges:   make([]services.GaugeItem, 10),
 	}
 
 	testsGauge := []string{
@@ -35,7 +35,7 @@ func TestUpdateMetrics(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			stat.MapLock.RLock()
 			defer stat.MapLock.RUnlock()
-			_, ok := stat.GaugeMap[name]
+			_, ok := stat.FindGauge(name)
 			assert.True(t, ok)
 		})
 	}
@@ -44,7 +44,7 @@ func TestUpdateMetrics(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			stat.MapLock.RLock()
 			defer stat.MapLock.RUnlock()
-			_, ok := stat.CounterMap[name]
+			_, ok := stat.FindCounter(name)
 			assert.True(t, ok)
 		})
 	}

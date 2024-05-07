@@ -24,8 +24,8 @@ func Run(cfg *Config) {
 	var counter int64
 
 	stat := &services.Stat{
-		CounterMap: make(map[string]int64),
-		GaugeMap:   make(map[string]float64),
+		Counters: make([]services.CounterItem, 1),
+		Gauges:   make([]services.GaugeItem, 10),
 	}
 	client := resty.New()
 

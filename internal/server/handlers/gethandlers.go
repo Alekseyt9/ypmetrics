@@ -45,11 +45,6 @@ func (h *Handler) HandleGetCounter(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "io.WriteString error", http.StatusBadRequest)
 	}
-	/*
-		} else {
-			http.Error(w, "metric not found", http.StatusNotFound)
-		}
-	*/
 }
 
 func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
