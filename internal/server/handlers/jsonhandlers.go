@@ -188,8 +188,8 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 	}
 
 	resData := common.MetricsBatch{
-		Counters: make([]common.CounterItem, 1),
-		Gauges:   make([]common.GaugeItem, 1),
+		Counters: make([]common.CounterItem, 0),
+		Gauges:   make([]common.GaugeItem, 0),
 	}
 
 	resData.Counters, err = h.store.GetCounters(r.Context())

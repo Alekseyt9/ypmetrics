@@ -12,8 +12,8 @@ func TestUpdateMetrics(t *testing.T) {
 	var counter int64
 	stat := &services.Stat{
 		Data: &common.MetricsBatch{
-			Counters: make([]common.CounterItem, 1),
-			Gauges:   make([]common.GaugeItem, 10),
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
 		},
 	}
 

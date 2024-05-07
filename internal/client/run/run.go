@@ -26,8 +26,8 @@ func Run(cfg *Config) {
 
 	stat := &services.Stat{
 		Data: &common.MetricsBatch{
-			Counters: make([]common.CounterItem, 1),
-			Gauges:   make([]common.GaugeItem, 10),
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
 		},
 	}
 	client := resty.New()

@@ -18,6 +18,9 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.Lock.Lock()
 	defer stat.Lock.Unlock()
 
+	stat.Data.Counters = make([]common.CounterItem, 0)
+	stat.Data.Gauges = make([]common.GaugeItem, 0)
+
 	stat.AddGauge("Alloc", float64(ms.Alloc))
 	stat.AddGauge("BuckHashSys", float64(ms.BuckHashSys))
 	stat.AddGauge("Frees", float64(ms.Frees))
@@ -51,11 +54,16 @@ func UpdateMetrics(stat *Stat, counter int64) {
 }
 
 func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
+	if len(stat.Data.Counters) == 0 && len(stat.Data.Gauges) == 0 {
+		return nil
+	}
+
 	copy := copyStat(stat)
 	out, err := easyjson.Marshal(copy)
 	if err != nil {
 		return fmt.Errorf("JSON marshalling error: %w", err)
 	}
+
 	compressedOut, err := common.GZIPCompress(out)
 	if err != nil {
 		return fmt.Errorf("data compress error: %w", err)
@@ -171,8 +179,8 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 
 func copyStat(stat *Stat) common.MetricsBatch {
 	copy := common.MetricsBatch{
-		Counters: make([]common.CounterItem, 1),
-		Gauges:   make([]common.GaugeItem, 10),
+		Counters: make([]common.CounterItem, 0, len(stat.Data.Counters)),
+		Gauges:   make([]common.GaugeItem, 0, len(stat.Data.Counters)),
 	}
 
 	stat.Lock.RLock()
