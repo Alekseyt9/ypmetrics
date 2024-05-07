@@ -65,7 +65,7 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 			})
 		})
 	})
-	r.Post("/updates", h.HandleUpdateBatchJSON)
+	r.Post("/updates/", h.HandleUpdateBatchJSON)
 
 	r.Route("/value", func(r chi.Router) {
 		r.Post("/", h.HandleValueJSON)
