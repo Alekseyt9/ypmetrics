@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/Alekseyt9/ypmetrics/internal/server/filedump"
 )
 
@@ -44,15 +45,26 @@ func (store *MemStorage) SetCounter(ctx context.Context, name string, value int6
 	return nil
 }
 
-func (store *MemStorage) GetCounterAll(ctx context.Context) ([]NameValueCounter, error) {
+func (store *MemStorage) GetCounters(ctx context.Context) ([]common.CounterItem, error) {
 	store.counterLock.RLock()
 	defer store.counterLock.RUnlock()
 
-	result := make([]NameValueCounter, 0, len(store.counterData))
+	result := make([]common.CounterItem, 0, len(store.counterData))
 	for name, value := range store.counterData {
-		result = append(result, NameValueCounter{Name: name, Value: value})
+		result = append(result, common.CounterItem{Name: name, Value: value})
 	}
 	return result, nil
+}
+
+func (store *MemStorage) SetCounters(ctx context.Context, items []common.CounterItem) error {
+	store.counterLock.Lock()
+	defer store.counterLock.Unlock()
+
+	for _, item := range items {
+		store.counterData[item.Name] = item.Value
+	}
+
+	return nil
 }
 
 func (store *MemStorage) GetGauge(ctx context.Context, name string) (float64, error) {
@@ -74,15 +86,26 @@ func (store *MemStorage) SetGauge(ctx context.Context, name string, value float6
 	return nil
 }
 
-func (store *MemStorage) GetGaugeAll(ctx context.Context) ([]NameValueGauge, error) {
+func (store *MemStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, error) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
-	result := make([]NameValueGauge, 0, len(store.gaugeData))
+	result := make([]common.GaugeItem, 0, len(store.gaugeData))
 	for name, value := range store.gaugeData {
-		result = append(result, NameValueGauge{Name: name, Value: value})
+		result = append(result, common.GaugeItem{Name: name, Value: value})
 	}
 	return result, nil
+}
+
+func (store *MemStorage) SetGauges(ctx context.Context, items []common.GaugeItem) error {
+	store.gaugeLock.Lock()
+	defer store.gaugeLock.Unlock()
+
+	for _, item := range items {
+		store.gaugeData[item.Name] = item.Value
+	}
+
+	return nil
 }
 
 func (store *MemStorage) LoadFromDump(dump *filedump.FileDump) {

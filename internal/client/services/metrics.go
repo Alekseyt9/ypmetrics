@@ -66,7 +66,7 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 		SetHeader("Content-Encoding", "gzip").
 		SetHeader("Accept-Encoding", "gzip").
 		SetBody(compressedOut).
-		Post("http://" + baseURL + "/update")
+		Post("http://" + baseURL + "/updates")
 
 	if err != nil {
 		return fmt.Errorf("error executing request: %w", err)

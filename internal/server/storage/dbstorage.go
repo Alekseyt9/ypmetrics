@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+
+	"github.com/Alekseyt9/ypmetrics/internal/common"
 )
 
 type DBStorage struct {
@@ -37,8 +39,8 @@ func (store *DBStorage) SetCounter(ctx context.Context, name string, value int64
 	return
 }
 
-func (store *DBStorage) GetCounterAll(ctx context.Context) (res []NameValueCounter, err error) {
-	res = []NameValueCounter{}
+func (store *DBStorage) GetCounters(ctx context.Context) (res []common.CounterItem, err error) {
+	res = []common.CounterItem{}
 	var rows *sql.Rows
 	rows, err = store.conn.QueryContext(ctx, "select name, value from counters")
 	if err != nil {
@@ -47,7 +49,7 @@ func (store *DBStorage) GetCounterAll(ctx context.Context) (res []NameValueCount
 	defer rows.Close()
 
 	for rows.Next() {
-		r := NameValueCounter{}
+		r := common.CounterItem{}
 		if err = rows.Scan(&r.Name, &r.Value); err != nil {
 			return nil, err
 		}
@@ -59,6 +61,36 @@ func (store *DBStorage) GetCounterAll(ctx context.Context) (res []NameValueCount
 	}
 
 	return res, nil
+}
+
+func (store *DBStorage) SetCounters(ctx context.Context, items []common.CounterItem) error {
+	tx, err := store.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		insert into counters(name, value)
+		values ($1, $2)
+		on conflict (name)
+		do update set value = counters.value + EXCLUDED.value
+	`)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	for _, item := range items {
+		_, err = stmt.ExecContext(ctx, item.Name, item.Value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (store *DBStorage) GetGauge(ctx context.Context, name string) (value float64, err error) {
@@ -82,8 +114,8 @@ func (store *DBStorage) SetGauge(ctx context.Context, name string, value float64
 	return
 }
 
-func (store *DBStorage) GetGaugeAll(ctx context.Context) (res []NameValueGauge, err error) {
-	res = []NameValueGauge{}
+func (store *DBStorage) GetGauges(ctx context.Context) (res []common.GaugeItem, err error) {
+	res = []common.GaugeItem{}
 	var rows *sql.Rows
 	rows, err = store.conn.QueryContext(ctx, "select name, value from gauges")
 	if err != nil {
@@ -92,7 +124,7 @@ func (store *DBStorage) GetGaugeAll(ctx context.Context) (res []NameValueGauge, 
 	defer rows.Close()
 
 	for rows.Next() {
-		r := NameValueGauge{}
+		r := common.GaugeItem{}
 		if err = rows.Scan(&r.Name, &r.Value); err != nil {
 			return nil, err
 		}
@@ -104,6 +136,36 @@ func (store *DBStorage) GetGaugeAll(ctx context.Context) (res []NameValueGauge, 
 	}
 
 	return res, nil
+}
+
+func (store *DBStorage) SetGauges(ctx context.Context, items []common.GaugeItem) error {
+	tx, err := store.conn.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+		insert into gauges(name, value)
+		values ($1, $2)
+		on conflict (name)
+		do update set value = EXCLUDED.value
+	`)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	for _, item := range items {
+		_, err = stmt.ExecContext(ctx, item.Name, item.Value)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (store *DBStorage) Bootstrap(ctx context.Context) error {

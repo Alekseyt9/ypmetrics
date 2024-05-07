@@ -63,7 +63,7 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "w.WriteHeader error", http.StatusBadRequest)
 	}
 
-	colGauge, err := h.store.GetGaugeAll(r.Context())
+	colGauge, err := h.store.GetGauges(r.Context())
 	if err != nil {
 		http.Error(w, "error GetGaugeAll", http.StatusBadRequest)
 	}
@@ -75,7 +75,7 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	colCounter, err := h.store.GetCounterAll(r.Context())
+	colCounter, err := h.store.GetCounters(r.Context())
 	if err != nil {
 		http.Error(w, "error GetCounterAll", http.StatusBadRequest)
 	}

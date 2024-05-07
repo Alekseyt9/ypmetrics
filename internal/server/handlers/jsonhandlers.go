@@ -110,7 +110,7 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
 	}
 
-	var restData = common.Metrics{
+	var resData = common.Metrics{
 		MType: data.MType,
 		ID:    data.ID,
 	}
@@ -125,7 +125,7 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "error GetGauge", http.StatusBadRequest)
 			}
 		}
-		restData.Value = &v
+		resData.Value = &v
 
 	case "counter":
 		v, err := h.store.GetCounter(r.Context(), data.ID)
@@ -136,13 +136,76 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "error GetCounter", http.StatusBadRequest)
 			}
 		}
-		restData.Delta = &v
+		resData.Delta = &v
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	out, err := easyjson.Marshal(restData)
+	out, err := easyjson.Marshal(resData)
+	if err != nil {
+		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
+	}
+	_, err = w.Write(out)
+	if err != nil {
+		http.Error(w, "error write body", http.StatusBadRequest)
+	}
+}
+
+func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) {
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "application/json") {
+		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
+	}
+
+	body, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+	if err != nil {
+		http.Error(w, "error reading body", http.StatusBadRequest)
+	}
+
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		body, err = common.GZIPDecompress(body)
+		if err != nil {
+			http.Error(w, "error decompress gzip", http.StatusBadRequest)
+		}
+	}
+
+	var data common.MetricsBatch
+	err = easyjson.Unmarshal(body, &data)
+	if err != nil {
+		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
+	}
+
+	err = h.store.SetCounters(r.Context(), data.Counters)
+	if err != nil {
+		http.Error(w, "error SetCounters", http.StatusBadRequest)
+	}
+
+	err = h.store.SetGauges(r.Context(), data.Gauges)
+	if err != nil {
+		http.Error(w, "error SetGauges", http.StatusBadRequest)
+	}
+
+	resData := common.MetricsBatch{
+		Counters: make([]common.CounterItem, 1),
+		Gauges:   make([]common.GaugeItem, 1),
+	}
+
+	resData.Counters, err = h.store.GetCounters(r.Context())
+	if err != nil {
+		http.Error(w, "error GetCounters", http.StatusBadRequest)
+	}
+
+	resData.Gauges, err = h.store.GetGauges(r.Context())
+	if err != nil {
+		http.Error(w, "error GetGauges", http.StatusBadRequest)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	out, err := easyjson.Marshal(resData)
 	if err != nil {
 		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
 	}
