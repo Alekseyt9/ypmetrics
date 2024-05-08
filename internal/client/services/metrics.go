@@ -70,11 +70,11 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 	}
 
 	_, err = client.R().
-		SetHeader("Content-Type", "Content-Type: application/json").
+		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
 		SetHeader("Accept-Encoding", "gzip").
 		SetBody(compressedOut).
-		Post("http://" + baseURL + "/updates")
+		Post("http://" + baseURL + "/updates/")
 
 	if err != nil {
 		return fmt.Errorf("error executing request: %w", err)
@@ -104,7 +104,7 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 		}
 
 		_, err = client.R().
-			SetHeader("Content-Type", "Content-Type: application/json").
+			SetHeader("Content-Type", "application/json").
 			SetHeader("Content-Encoding", "gzip").
 			SetHeader("Accept-Encoding", "gzip").
 			SetBody(compressedOut).
@@ -132,7 +132,7 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 		}
 
 		_, err = client.R().
-			SetHeader("Content-Type", "Content-Type: application/json").
+			SetHeader("Content-Type", "application/json").
 			SetHeader("Content-Encoding", "gzip").
 			SetHeader("Accept-Encoding", "gzip").
 			SetBody(compressedOut).
@@ -150,7 +150,7 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 
 	for _, item := range copy.Gauges {
 		_, err := client.R().
-			SetHeader("Content-Type", "Content-Type: text/plain").
+			SetHeader("Content-Type", "text/plain").
 			SetPathParams(map[string]string{
 				"type":  item.Name,
 				"value": strconv.FormatFloat(item.Value, 'f', -1, 64),
@@ -163,7 +163,7 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 
 	for _, item := range copy.Counters {
 		_, err := client.R().
-			SetHeader("Content-Type", "Content-Type: text/plain").
+			SetHeader("Content-Type", "text/plain").
 			SetPathParams(map[string]string{
 				"type":  item.Name,
 				"value": strconv.FormatInt(item.Value, 10),
