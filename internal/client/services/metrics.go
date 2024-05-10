@@ -58,8 +58,8 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 		return nil
 	}
 
-	copy := stat.Data.ToMetricsSlice()
-	out, err := easyjson.Marshal(copy)
+	statCopy := stat.Data.ToMetricsSlice()
+	out, err := easyjson.Marshal(statCopy)
 	if err != nil {
 		return fmt.Errorf("JSON marshalling error: %w", err)
 	}
@@ -84,13 +84,13 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 }
 
 func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
-	copy := copyStat(stat)
+	statCopy := copyStat(stat)
 
-	for _, item := range copy.Gauges {
+	for _, item := range statCopy.Gauges {
 		data := common.Metrics{
 			ID:    item.Name,
 			MType: "gauge",
-			Value: &item.Value,
+			Value: &item.Value, //nolint:gosec //version 1.22.2
 		}
 
 		out, err := easyjson.Marshal(data)
@@ -115,11 +115,11 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 		}
 	}
 
-	for _, item := range copy.Counters {
+	for _, item := range statCopy.Counters {
 		data := common.Metrics{
 			ID:    item.Name,
 			MType: "counter",
-			Delta: &item.Value,
+			Delta: &item.Value, //nolint:gosec //version 1.22.2
 		}
 		out, err := easyjson.Marshal(data)
 		if err != nil {
@@ -146,9 +146,9 @@ func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
 }
 
 func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
-	copy := copyStat(stat)
+	statCopy := copyStat(stat)
 
-	for _, item := range copy.Gauges {
+	for _, item := range statCopy.Gauges {
 		_, err := client.R().
 			SetHeader("Content-Type", "text/plain").
 			SetPathParams(map[string]string{
@@ -161,7 +161,7 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 		}
 	}
 
-	for _, item := range copy.Counters {
+	for _, item := range statCopy.Counters {
 		_, err := client.R().
 			SetHeader("Content-Type", "text/plain").
 			SetPathParams(map[string]string{
@@ -178,19 +178,19 @@ func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
 }
 
 func copyStat(stat *Stat) common.MetricItems {
-	copy := common.MetricItems{
+	dataCopy := common.MetricItems{
 		Counters: make([]common.CounterItem, 0, len(stat.Data.Counters)),
 		Gauges:   make([]common.GaugeItem, 0, len(stat.Data.Counters)),
 	}
 
 	stat.Lock.RLock()
 	for _, item := range stat.Data.Gauges {
-		copy.Gauges = append(copy.Gauges, common.GaugeItem{Name: item.Name, Value: item.Value})
+		dataCopy.Gauges = append(dataCopy.Gauges, common.GaugeItem{Name: item.Name, Value: item.Value})
 	}
 	for _, item := range stat.Data.Counters {
-		copy.Counters = append(copy.Counters, common.CounterItem{Name: item.Name, Value: item.Value})
+		dataCopy.Counters = append(dataCopy.Counters, common.CounterItem{Name: item.Name, Value: item.Value})
 	}
 	stat.Lock.RUnlock()
 
-	return copy
+	return dataCopy
 }

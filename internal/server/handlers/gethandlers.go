@@ -97,7 +97,7 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandlePing(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandlePing(w http.ResponseWriter, _ *http.Request) {
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, h.settings.DatabaseDSN)
 	if err != nil {

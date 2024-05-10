@@ -18,31 +18,32 @@ func NewDBStorage(conn *sql.DB) *DBStorage {
 	}
 }
 
-func (store *DBStorage) GetCounter(ctx context.Context, name string) (value int64, err error) {
+func (store *DBStorage) GetCounter(ctx context.Context, name string) (int64, error) {
 	row := store.conn.QueryRowContext(ctx, `SELECT value FROM counters WHERE name = $1`, name)
-	err = row.Scan(&value)
+	var value int64
+	err := row.Scan(&value)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrNotFound
 	}
 
-	return
+	return value, err
 }
 
-func (store *DBStorage) SetCounter(ctx context.Context, name string, value int64) (err error) {
-	_, err = store.conn.ExecContext(ctx, `
+func (store *DBStorage) SetCounter(ctx context.Context, name string, value int64) error {
+	_, err := store.conn.ExecContext(ctx, `
 		insert into counters(name, value)
 		values ($1, $2)
 		on conflict (name)
 		do update set value = counters.value + EXCLUDED.value
 	`, name, value)
-	return
+	return err
 }
 
-func (store *DBStorage) GetCounters(ctx context.Context) (res []common.CounterItem, err error) {
-	res = []common.CounterItem{}
+func (store *DBStorage) GetCounters(ctx context.Context) ([]common.CounterItem, error) {
+	var res = []common.CounterItem{}
 	var rows *sql.Rows
-	rows, err = store.conn.QueryContext(ctx, "select name, value from counters")
+	rows, err := store.conn.QueryContext(ctx, "select name, value from counters")
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (store *DBStorage) GetCounters(ctx context.Context) (res []common.CounterIt
 		res = append(res, r)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +70,7 @@ func (store *DBStorage) SetCounters(ctx context.Context, items []common.CounterI
 		return err
 	}
 
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck //defer
 
 	stmt, err := tx.PrepareContext(ctx, `
 		insert into counters(name, value)
@@ -93,31 +94,32 @@ func (store *DBStorage) SetCounters(ctx context.Context, items []common.CounterI
 	return tx.Commit()
 }
 
-func (store *DBStorage) GetGauge(ctx context.Context, name string) (value float64, err error) {
+func (store *DBStorage) GetGauge(ctx context.Context, name string) (float64, error) {
 	row := store.conn.QueryRowContext(ctx, `SELECT value FROM gauges WHERE name = $1`, name)
-	err = row.Scan(&value)
+	var value float64
+	err := row.Scan(&value)
 
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrNotFound
 	}
 
-	return
+	return value, err
 }
 
-func (store *DBStorage) SetGauge(ctx context.Context, name string, value float64) (err error) {
-	_, err = store.conn.ExecContext(ctx, `
+func (store *DBStorage) SetGauge(ctx context.Context, name string, value float64) error {
+	_, err := store.conn.ExecContext(ctx, `
 		insert into gauges(name, value)
 		values ($1, $2)
 		on conflict (name)
 		do update set value = EXCLUDED.value
 	`, name, value)
-	return
+	return err
 }
 
-func (store *DBStorage) GetGauges(ctx context.Context) (res []common.GaugeItem, err error) {
-	res = []common.GaugeItem{}
+func (store *DBStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, error) {
+	var res = []common.GaugeItem{}
 	var rows *sql.Rows
-	rows, err = store.conn.QueryContext(ctx, "select name, value from gauges")
+	rows, err := store.conn.QueryContext(ctx, "select name, value from gauges")
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +133,7 @@ func (store *DBStorage) GetGauges(ctx context.Context) (res []common.GaugeItem, 
 		res = append(res, r)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
 
@@ -144,7 +146,7 @@ func (store *DBStorage) SetGauges(ctx context.Context, items []common.GaugeItem)
 		return err
 	}
 
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck //defer
 
 	stmt, err := tx.PrepareContext(ctx, `
 		insert into gauges(name, value)
@@ -174,9 +176,9 @@ func (store *DBStorage) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	defer tx.Rollback()
+	defer tx.Rollback() //nolint:errcheck //defer
 
-	tx.ExecContext(ctx, `
+	_, err = tx.ExecContext(ctx, `
 		CREATE TABLE gauges (
 			name varchar(128) PRIMARY KEY,
 			value double precision
@@ -187,6 +189,9 @@ func (store *DBStorage) Bootstrap(ctx context.Context) error {
 			value bigint
 		);
 	`) // Индекс не нужет, тк в pg для pk индекс создается автоматически.
+	if err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }

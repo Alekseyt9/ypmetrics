@@ -14,7 +14,6 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
@@ -90,7 +89,7 @@ func Run(cfg *Config) error {
 		}
 
 		dbstore := storage.NewDBRetryStorage(storage.NewDBStorage(db))
-		//dbstore := storage.NewDBStorage(db)
+
 		err = dbstore.Bootstrap(context.Background())
 		if err != nil {
 			logger.Error("Database has already initialized")
@@ -109,6 +108,10 @@ func Run(cfg *Config) error {
 		}
 	}
 
+	return serverStart(store, cfg, logger)
+}
+
+func serverStart(store storage.Storage, cfg *Config, logger logger.Logger) error {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -132,6 +135,13 @@ func Run(cfg *Config) error {
 		}()
 	}
 
+	finalize(store, server, cfg, logger)
+
+	logger.Info("Running server on ", "address", cfg.Address)
+	return server.ListenAndServe()
+}
+
+func finalize(store storage.Storage, server *http.Server, cfg *Config, logger logger.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -147,7 +157,4 @@ func Run(cfg *Config) error {
 			logger.Info("Server shutdown", "error", err)
 		}
 	}()
-
-	logger.Info("Running server on ", "address", cfg.Address)
-	return server.ListenAndServe()
 }

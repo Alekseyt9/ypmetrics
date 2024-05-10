@@ -5,6 +5,13 @@ import (
 	"time"
 )
 
+const (
+	maxRetries  = 3
+	retryDelay1 = 1 * time.Second
+	retryDelay2 = 3 * time.Second
+	retryDelay3 = 5 * time.Second
+)
+
 type RetryController struct {
 	Retries   int
 	Delays    []time.Duration
@@ -13,7 +20,7 @@ type RetryController struct {
 
 func NewRetryControllerStd(needRetry func(error) bool) *RetryController {
 	return NewRetryController(
-		3, []time.Duration{1 * time.Second, 3 * time.Second, 5 * time.Second}, needRetry)
+		maxRetries, []time.Duration{retryDelay1, retryDelay2, retryDelay3}, needRetry)
 }
 
 func NewRetryController(retries int, delays []time.Duration, needRetry func(error) bool) *RetryController {

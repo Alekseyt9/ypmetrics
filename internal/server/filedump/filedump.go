@@ -10,14 +10,20 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 )
 
-var mutex sync.Mutex
-
 type FileDump struct {
 	CounterData map[string]int64   `json:"counter"`
 	GaugeData   map[string]float64 `json:"gauge"`
 }
 
-func (dump FileDump) Save(fname string) error {
+type Controller struct {
+	mutex sync.Mutex
+}
+
+func NewController() *Controller {
+	return &Controller{}
+}
+
+func (dc *Controller) Save(dump *FileDump, fname string) error {
 	data, err := json.MarshalIndent(dump, "", "   ")
 	if err != nil {
 		return err
@@ -25,9 +31,9 @@ func (dump FileDump) Save(fname string) error {
 
 	rc := common.NewRetryControllerStd(isRetriableError)
 	err = rc.Do(func() error {
-		mutex.Lock()
-		defer mutex.Unlock()
-		return os.WriteFile(fname, data, 0666) //nolint:gosec //to pass tests
+		dc.mutex.Lock()
+		defer dc.mutex.Unlock()
+		return os.WriteFile(fname, data, 0666) //nolint:gosec //for passing tests
 	})
 	if err != nil {
 		return err
@@ -35,7 +41,7 @@ func (dump FileDump) Save(fname string) error {
 	return nil
 }
 
-func (dump *FileDump) Load(fname string) error {
+func (dc *Controller) Load(dump *FileDump, fname string) error {
 	rc := common.NewRetryControllerStd(isRetriableError)
 	err := rc.Do(func() error {
 		data, err := os.ReadFile(fname)
@@ -60,10 +66,13 @@ func isRetriableError(err error) bool {
 
 	var pathErr *os.PathError
 	if errors.As(err, &pathErr) {
-		if errno, ok := pathErr.Err.(syscall.Errno); ok {
-			switch errno {
+		var errno syscall.Errno
+		if errors.As(pathErr.Err, &errno) {
+			switch errno { //nolint:exhaustive //-
 			case syscall.EACCES, syscall.EAGAIN, syscall.EBUSY:
 				return true
+			default:
+				return false
 			}
 		}
 	}

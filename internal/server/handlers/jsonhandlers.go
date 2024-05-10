@@ -9,6 +9,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/mailru/easyjson"
+	"golang.org/x/net/context"
 )
 
 func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
@@ -43,12 +44,13 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 
 	switch data.MType {
 	case "gauge":
-		err := h.store.SetGauge(r.Context(), data.ID, *data.Value)
+		err = h.store.SetGauge(r.Context(), data.ID, *data.Value)
 		if err != nil {
 			http.Error(w, "error SetGauge", http.StatusBadRequest)
 		}
 
-		v, err := h.store.GetGauge(r.Context(), data.ID)
+		var v float64
+		v, err = h.store.GetGauge(r.Context(), data.ID)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				http.Error(w, "metric not found", http.StatusNotFound)
@@ -58,12 +60,13 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		restData.Value = &v
 
 	case "counter":
-		err := h.store.SetCounter(r.Context(), data.ID, *data.Delta)
+		err = h.store.SetCounter(r.Context(), data.ID, *data.Delta)
 		if err != nil {
 			http.Error(w, "error SetCounter", http.StatusBadRequest)
 		}
 
-		v, err := h.store.GetCounter(r.Context(), data.ID)
+		var v int64
+		v, err = h.store.GetCounter(r.Context(), data.ID)
 		if err != nil {
 			http.Error(w, "error GetCounter", http.StatusBadRequest)
 		}
@@ -110,34 +113,7 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
 	}
 
-	var resData = common.Metrics{
-		MType: data.MType,
-		ID:    data.ID,
-	}
-
-	switch data.MType {
-	case "gauge":
-		v, err := h.store.GetGauge(r.Context(), data.ID)
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				v = 0
-			} else {
-				http.Error(w, "error GetGauge", http.StatusBadRequest)
-			}
-		}
-		resData.Value = &v
-
-	case "counter":
-		v, err := h.store.GetCounter(r.Context(), data.ID)
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				v = 0
-			} else {
-				http.Error(w, "error GetCounter", http.StatusBadRequest)
-			}
-		}
-		resData.Delta = &v
-	}
+	resData := h.getMetrics(r.Context(), data, w)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -150,6 +126,40 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "error write body", http.StatusBadRequest)
 	}
+}
+
+func (h *Handler) getMetrics(ctx context.Context, data common.Metrics, w http.ResponseWriter) *common.Metrics {
+	var resData = &common.Metrics{
+		MType: data.MType,
+		ID:    data.ID,
+	}
+
+	switch data.MType {
+	case "gauge":
+		var v float64
+		v, err := h.store.GetGauge(ctx, data.ID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				v = 0
+			} else {
+				http.Error(w, "error GetGauge", http.StatusBadRequest)
+			}
+		}
+		resData.Value = &v
+
+	case "counter":
+		var v int64
+		v, err := h.store.GetCounter(ctx, data.ID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				v = 0
+			} else {
+				http.Error(w, "error GetCounter", http.StatusBadRequest)
+			}
+		}
+		resData.Delta = &v
+	}
+	return resData
 }
 
 func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) {

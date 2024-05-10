@@ -37,11 +37,13 @@ func (s MetricItems) ToMetricsSlice() MetricsSlice {
 	res := make([]Metrics, 0)
 
 	for _, item := range s.Counters {
-		res = append(res, Metrics{ID: item.Name, MType: "counter", Delta: &item.Value})
+		res = append(res,
+			Metrics{ID: item.Name, MType: "counter", Delta: &item.Value}) //nolint:gosec,exportloopref //version 1.22.2
 	}
 
 	for _, item := range s.Gauges {
-		res = append(res, Metrics{ID: item.Name, MType: "gauge", Value: &item.Value})
+		res = append(res,
+			Metrics{ID: item.Name, MType: "gauge", Value: &item.Value}) //nolint:gosec,exportloopref //version 1.22.2
 	}
 
 	return res

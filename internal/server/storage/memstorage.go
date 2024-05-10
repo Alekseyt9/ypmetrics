@@ -23,7 +23,7 @@ func NewMemStorage() Storage {
 	}
 }
 
-func (store *MemStorage) GetCounter(ctx context.Context, name string) (int64, error) {
+func (store *MemStorage) GetCounter(_ context.Context, name string) (int64, error) {
 	store.counterLock.RLock()
 	defer store.counterLock.RUnlock()
 	v, ok := store.counterData[name]
@@ -33,7 +33,7 @@ func (store *MemStorage) GetCounter(ctx context.Context, name string) (int64, er
 	return v, nil
 }
 
-func (store *MemStorage) SetCounter(ctx context.Context, name string, value int64) error {
+func (store *MemStorage) SetCounter(_ context.Context, name string, value int64) error {
 	store.counterLock.Lock()
 	defer store.counterLock.Unlock()
 
@@ -45,7 +45,7 @@ func (store *MemStorage) SetCounter(ctx context.Context, name string, value int6
 	return nil
 }
 
-func (store *MemStorage) GetCounters(ctx context.Context) ([]common.CounterItem, error) {
+func (store *MemStorage) GetCounters(_ context.Context) ([]common.CounterItem, error) {
 	store.counterLock.RLock()
 	defer store.counterLock.RUnlock()
 
@@ -56,7 +56,7 @@ func (store *MemStorage) GetCounters(ctx context.Context) ([]common.CounterItem,
 	return result, nil
 }
 
-func (store *MemStorage) SetCounters(ctx context.Context, items []common.CounterItem) error {
+func (store *MemStorage) SetCounters(_ context.Context, items []common.CounterItem) error {
 	store.counterLock.Lock()
 	defer store.counterLock.Unlock()
 
@@ -67,7 +67,7 @@ func (store *MemStorage) SetCounters(ctx context.Context, items []common.Counter
 	return nil
 }
 
-func (store *MemStorage) GetGauge(ctx context.Context, name string) (float64, error) {
+func (store *MemStorage) GetGauge(_ context.Context, name string) (float64, error) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
@@ -78,7 +78,7 @@ func (store *MemStorage) GetGauge(ctx context.Context, name string) (float64, er
 	return v, nil
 }
 
-func (store *MemStorage) SetGauge(ctx context.Context, name string, value float64) error {
+func (store *MemStorage) SetGauge(_ context.Context, name string, value float64) error {
 	store.gaugeLock.Lock()
 	defer store.gaugeLock.Unlock()
 
@@ -86,7 +86,7 @@ func (store *MemStorage) SetGauge(ctx context.Context, name string, value float6
 	return nil
 }
 
-func (store *MemStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, error) {
+func (store *MemStorage) GetGauges(_ context.Context) ([]common.GaugeItem, error) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
@@ -97,7 +97,7 @@ func (store *MemStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, err
 	return result, nil
 }
 
-func (store *MemStorage) SetGauges(ctx context.Context, items []common.GaugeItem) error {
+func (store *MemStorage) SetGauges(_ context.Context, items []common.GaugeItem) error {
 	store.gaugeLock.Lock()
 	defer store.gaugeLock.Unlock()
 
@@ -141,7 +141,8 @@ func (store *MemStorage) SaveToFile(filePath string) error {
 		GaugeData:   make(map[string]float64),
 	}
 	store.SaveToDump(dump)
-	return dump.Save(filePath)
+	dc := filedump.NewController()
+	return dc.Save(dump, filePath)
 }
 
 func (store *MemStorage) LoadFromFile(filePath string) error {
@@ -149,7 +150,8 @@ func (store *MemStorage) LoadFromFile(filePath string) error {
 		return nil
 	}
 	dump := &filedump.FileDump{}
-	err := dump.Load(filePath)
+	dc := filedump.NewController()
+	err := dc.Load(dump, filePath)
 	if err != nil {
 		return err
 	}
