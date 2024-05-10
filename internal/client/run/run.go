@@ -1,9 +1,12 @@
 package run
 
 import (
+	"errors"
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -42,7 +45,18 @@ func Run(cfg *Config) {
 
 	go func() {
 		for {
-			err := services.SendMetricsBatch(client, cfg.Address, stat)
+			retryCtr := common.NewRetryControllerStd(func(err error) bool {
+				var netErr net.Error
+				if (errors.As(err, &netErr) && netErr.Timeout()) ||
+					strings.Contains(err.Error(), "EOF") ||
+					strings.Contains(err.Error(), "connection reset by peer") {
+					return true
+				}
+				return false
+			})
+			err := retryCtr.Do(func() error {
+				return services.SendMetricsBatch(client, cfg.Address, stat)
+			})
 			if err != nil {
 				log.Print(err)
 			}
