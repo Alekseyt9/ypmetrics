@@ -12,10 +12,15 @@ type DBStorage struct {
 	conn *sql.DB
 }
 
-func NewDBStorage(conn *sql.DB) *DBStorage {
+func NewDBStorage(dsn string) (*DBStorage, error) {
+	conn, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DBStorage{
 		conn: conn,
-	}
+	}, nil
 }
 
 func (store *DBStorage) GetCounter(ctx context.Context, name string) (int64, error) {
@@ -194,4 +199,8 @@ func (store *DBStorage) Bootstrap(ctx context.Context) error {
 	}
 
 	return tx.Commit()
+}
+
+func (store *DBStorage) Ping(ctx context.Context) error {
+	return store.conn.PingContext(ctx)
 }

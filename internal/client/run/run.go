@@ -13,6 +13,7 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -45,7 +46,7 @@ func Run(cfg *Config) {
 
 	go func() {
 		for {
-			retryCtr := common.NewRetryControllerStd(func(err error) bool {
+			retryCtr := retry.NewControllerStd(func(err error) bool {
 				var netErr net.Error
 				if (errors.As(err, &netErr) && netErr.Timeout()) ||
 					strings.Contains(err.Error(), "EOF") ||

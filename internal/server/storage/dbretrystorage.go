@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -18,7 +19,7 @@ func NewDBRetryStorage(s *DBStorage) *DBRetryStorage {
 }
 
 func doInRetry(f func() error) error {
-	rc := common.NewRetryControllerStd(func(err error) bool {
+	rc := retry.NewControllerStd(func(err error) bool {
 		code, ok := extractErrorCode(err)
 		if !ok {
 			return false
@@ -111,6 +112,14 @@ func (store *DBRetryStorage) SetGauges(ctx context.Context, items []common.Gauge
 func (store *DBRetryStorage) Bootstrap(ctx context.Context) error {
 	err := doInRetry(func() error {
 		err := store.s.Bootstrap(ctx)
+		return err
+	})
+	return err
+}
+
+func (store *DBRetryStorage) Ping(ctx context.Context) error {
+	err := doInRetry(func() error {
+		err := store.s.Ping(ctx)
 		return err
 	})
 	return err

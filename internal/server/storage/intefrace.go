@@ -19,4 +19,6 @@ type Storage interface {
 	SetGauge(ctx context.Context, name string, value float64) error
 	GetGauges(ctx context.Context) ([]common.GaugeItem, error)
 	SetGauges(ctx context.Context, items []common.GaugeItem) error
+
+	Ping(ctx context.Context) error
 }

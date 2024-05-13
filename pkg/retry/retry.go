@@ -1,4 +1,4 @@
-package common
+package retry
 
 import (
 	"fmt"
@@ -12,26 +12,26 @@ const (
 	retryDelay3 = 5 * time.Second
 )
 
-type RetryController struct {
+type Controller struct {
 	Retries   int
 	Delays    []time.Duration
 	NeedRetry func(error) bool
 }
 
-func NewRetryControllerStd(needRetry func(error) bool) *RetryController {
-	return NewRetryController(
+func NewControllerStd(needRetry func(error) bool) *Controller {
+	return NewController(
 		maxRetries, []time.Duration{retryDelay1, retryDelay2, retryDelay3}, needRetry)
 }
 
-func NewRetryController(retries int, delays []time.Duration, needRetry func(error) bool) *RetryController {
-	return &RetryController{
+func NewController(retries int, delays []time.Duration, needRetry func(error) bool) *Controller {
+	return &Controller{
 		Retries:   retries,
 		Delays:    delays,
 		NeedRetry: needRetry,
 	}
 }
 
-func (rc *RetryController) Do(f func() error) error {
+func (rc *Controller) Do(f func() error) error {
 	attempt := 0
 	for {
 		err := f()

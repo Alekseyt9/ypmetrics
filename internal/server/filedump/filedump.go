@@ -7,7 +7,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 )
 
 type FileDump struct {
@@ -29,7 +29,7 @@ func (dc *Controller) Save(dump *FileDump, fname string) error {
 		return err
 	}
 
-	rc := common.NewRetryControllerStd(isRetriableError)
+	rc := retry.NewControllerStd(isRetriableError)
 	err = rc.Do(func() error {
 		dc.mutex.Lock()
 		defer dc.mutex.Unlock()
@@ -42,7 +42,7 @@ func (dc *Controller) Save(dump *FileDump, fname string) error {
 }
 
 func (dc *Controller) Load(dump *FileDump, fname string) error {
-	rc := common.NewRetryControllerStd(isRetriableError)
+	rc := retry.NewControllerStd(isRetriableError)
 	err := rc.Do(func() error {
 		data, err := os.ReadFile(fname)
 		if err != nil {

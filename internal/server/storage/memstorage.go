@@ -158,3 +158,7 @@ func (store *MemStorage) LoadFromFile(filePath string) error {
 	store.LoadFromDump(dump)
 	return nil
 }
+
+func (store *MemStorage) Ping(_ context.Context) error {
+	return nil
+}

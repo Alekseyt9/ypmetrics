@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +9,6 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
 )
 
 func (h *Handler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
@@ -97,15 +95,8 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandlePing(w http.ResponseWriter, _ *http.Request) {
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, h.settings.DatabaseDSN)
-	if err != nil {
-		http.Error(w, "database error", http.StatusInternalServerError)
-	}
-	defer conn.Close(ctx)
-
-	err = conn.Ping(ctx)
+func (h *Handler) HandlePing(w http.ResponseWriter, r *http.Request) {
+	err := h.store.Ping(r.Context())
 	if err != nil {
 		http.Error(w, "database error", http.StatusInternalServerError)
 	}

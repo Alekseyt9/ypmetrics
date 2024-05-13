@@ -2,7 +2,6 @@ package run
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"os"
 	"os/signal"
@@ -83,12 +82,11 @@ func Run(cfg *Config) error {
 	logger := logger.NewSlogLogger()
 
 	if cfg.DataBaseDSN != "" {
-		db, err := sql.Open("pgx", cfg.DataBaseDSN)
+		innerStore, err := storage.NewDBStorage(cfg.DataBaseDSN)
 		if err != nil {
 			return err
 		}
-
-		dbstore := storage.NewDBRetryStorage(storage.NewDBStorage(db))
+		dbstore := storage.NewDBRetryStorage(innerStore)
 
 		err = dbstore.Bootstrap(context.Background())
 		if err != nil {
