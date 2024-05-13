@@ -8,7 +8,9 @@ import (
 	"runtime"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
-	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 type DBStorage struct {
@@ -184,7 +186,8 @@ func (store *DBStorage) SetGauges(ctx context.Context, items []common.GaugeItem)
 }
 
 func bootstrap(connString string) error {
-	m, err := migrate.New(getMigrationPath(), connString)
+	mPath := getMigrationPath()
+	m, err := migrate.New(mPath, connString)
 	if err != nil {
 		return err
 	}
@@ -205,5 +208,6 @@ func getMigrationPath() string {
 	_, currentFilePath, _, _ := runtime.Caller(0)
 	currentDir := filepath.Dir(currentFilePath)
 	migrationsPath := filepath.Join(currentDir, "migrations")
+	migrationsPath = filepath.ToSlash(migrationsPath)
 	return "file://" + migrationsPath
 }
