@@ -184,13 +184,13 @@ func copyStat(stat *Stat) common.MetricItems {
 	}
 
 	stat.Lock.RLock()
+	defer stat.Lock.RUnlock()
 	for _, item := range stat.Data.Gauges {
 		dataCopy.Gauges = append(dataCopy.Gauges, common.GaugeItem{Name: item.Name, Value: item.Value})
 	}
 	for _, item := range stat.Data.Counters {
 		dataCopy.Counters = append(dataCopy.Counters, common.CounterItem{Name: item.Name, Value: item.Value})
 	}
-	stat.Lock.RUnlock()
 
 	return dataCopy
 }

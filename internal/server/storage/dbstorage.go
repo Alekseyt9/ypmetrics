@@ -4,8 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"path/filepath"
+	"runtime"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/golang-migrate/migrate"
+	"github.com/golang-migrate/migrate/database/postgres"
 )
 
 type DBStorage struct {
@@ -175,32 +179,32 @@ func (store *DBStorage) SetGauges(ctx context.Context, items []common.GaugeItem)
 	return tx.Commit()
 }
 
-func (store *DBStorage) Bootstrap(ctx context.Context) error {
-	tx, err := store.conn.BeginTx(ctx, nil)
+func (store *DBStorage) Bootstrap(_ context.Context) error {
+	driver, err := postgres.WithInstance(store.conn, &postgres.Config{})
 	if err != nil {
 		return err
 	}
 
-	defer tx.Rollback() //nolint:errcheck //defer
-
-	_, err = tx.ExecContext(ctx, `
-		CREATE TABLE gauges (
-			name varchar(128) PRIMARY KEY,
-			value double precision
-		);
-
-		CREATE TABLE counters (
-			name varchar(128) PRIMARY KEY,
-			value bigint
-		);
-	`) // Индекс не нужет, тк в pg для pk индекс создается автоматически.
+	m, err := migrate.NewWithDatabaseInstance(getMigrationPath(), "postgres", driver)
 	if err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	err = m.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
+
+	return nil
 }
 
 func (store *DBStorage) Ping(ctx context.Context) error {
 	return store.conn.PingContext(ctx)
+}
+
+func getMigrationPath() string {
+	_, currentFilePath, _, _ := runtime.Caller(0)
+	currentDir := filepath.Dir(currentFilePath)
+	migrationsPath := filepath.Join(currentDir, "migrations")
+	return "file://" + migrationsPath
 }
