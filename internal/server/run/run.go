@@ -86,12 +86,8 @@ func Run(cfg *Config) error {
 		if err != nil {
 			return err
 		}
-		dbstore := storage.NewDBRetryStorage(innerStore)
 
-		err = dbstore.Bootstrap(context.Background())
-		if err != nil {
-			logger.Error("Database has already initialized")
-		}
+		dbstore := storage.NewDBRetryStorage(innerStore)
 		store = dbstore
 	} else {
 		store = storage.NewMemStorage()

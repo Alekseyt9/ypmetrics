@@ -9,15 +9,19 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/golang-migrate/migrate"
-	"github.com/golang-migrate/migrate/database/postgres"
 )
 
 type DBStorage struct {
 	conn *sql.DB
 }
 
-func NewDBStorage(dsn string) (*DBStorage, error) {
-	conn, err := sql.Open("pgx", dsn)
+func NewDBStorage(connString string) (*DBStorage, error) {
+	conn, err := sql.Open("pgx", connString)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bootstrap(connString)
 	if err != nil {
 		return nil, err
 	}
@@ -179,13 +183,8 @@ func (store *DBStorage) SetGauges(ctx context.Context, items []common.GaugeItem)
 	return tx.Commit()
 }
 
-func (store *DBStorage) Bootstrap(_ context.Context) error {
-	driver, err := postgres.WithInstance(store.conn, &postgres.Config{})
-	if err != nil {
-		return err
-	}
-
-	m, err := migrate.NewWithDatabaseInstance(getMigrationPath(), "postgres", driver)
+func bootstrap(connString string) error {
+	m, err := migrate.New(getMigrationPath(), connString)
 	if err != nil {
 		return err
 	}

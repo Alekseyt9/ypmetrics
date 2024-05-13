@@ -109,14 +109,6 @@ func (store *DBRetryStorage) SetGauges(ctx context.Context, items []common.Gauge
 	return err
 }
 
-func (store *DBRetryStorage) Bootstrap(ctx context.Context) error {
-	err := doInRetry(func() error {
-		err := store.s.Bootstrap(ctx)
-		return err
-	})
-	return err
-}
-
 func (store *DBRetryStorage) Ping(ctx context.Context) error {
 	err := doInRetry(func() error {
 		err := store.s.Ping(ctx)
