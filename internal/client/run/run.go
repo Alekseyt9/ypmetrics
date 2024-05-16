@@ -1,14 +1,19 @@
 package run
 
 import (
+	"errors"
 	"log"
+	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -24,8 +29,10 @@ func Run(cfg *Config) {
 	var counter int64
 
 	stat := &services.Stat{
-		CounterMap: make(map[string]int64),
-		GaugeMap:   make(map[string]float64),
+		Data: &common.MetricItems{
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
+		},
 	}
 	client := resty.New()
 
@@ -39,7 +46,18 @@ func Run(cfg *Config) {
 
 	go func() {
 		for {
-			err := services.SendMetricsJSON(client, cfg.Address, stat)
+			retryCtr := retry.NewControllerStd(func(err error) bool {
+				var netErr net.Error
+				if (errors.As(err, &netErr) && netErr.Timeout()) ||
+					strings.Contains(err.Error(), "EOF") ||
+					strings.Contains(err.Error(), "connection reset by peer") {
+					return true
+				}
+				return false
+			})
+			err := retryCtr.Do(func() error {
+				return services.SendMetricsBatch(client, cfg.Address, stat)
+			})
 			if err != nil {
 				log.Print(err)
 			}

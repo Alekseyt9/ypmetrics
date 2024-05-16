@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {

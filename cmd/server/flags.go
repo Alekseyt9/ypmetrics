@@ -17,12 +17,15 @@ func ParseFlags(cfg *run.Config) {
 		"Full name of the file where the current values are saved")
 	restore := flag.BoolP("restore", "r", true,
 		"Load previously saved values from the file when the server starts")
+	database := flag.StringP("database", "d", "", "Database connection string")
+
 	flag.Parse()
 
 	cfg.Address = *address
 	cfg.StoreInterval = *storeInterval
 	cfg.FileStoragePath = *fileStoragePath
 	cfg.Restore = *restore
+	cfg.DataBaseDSN = *database
 }
 
 func SetEnv(cfg *run.Config) {

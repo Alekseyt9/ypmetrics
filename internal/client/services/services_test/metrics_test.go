@@ -4,14 +4,17 @@ import (
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestUpdateMetrics(t *testing.T) {
 	var counter int64
 	stat := &services.Stat{
-		CounterMap: make(map[string]int64),
-		GaugeMap:   make(map[string]float64),
+		Data: &common.MetricItems{
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
+		},
 	}
 
 	testsGauge := []string{
@@ -33,18 +36,18 @@ func TestUpdateMetrics(t *testing.T) {
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {
-			stat.MapLock.RLock()
-			defer stat.MapLock.RUnlock()
-			_, ok := stat.GaugeMap[name]
+			stat.Lock.RLock()
+			defer stat.Lock.RUnlock()
+			_, ok := stat.FindGauge(name)
 			assert.True(t, ok)
 		})
 	}
 
 	for _, name := range testsCounter {
 		t.Run(name, func(t *testing.T) {
-			stat.MapLock.RLock()
-			defer stat.MapLock.RUnlock()
-			_, ok := stat.CounterMap[name]
+			stat.Lock.RLock()
+			defer stat.Lock.RUnlock()
+			_, ok := stat.FindCounter(name)
 			assert.True(t, ok)
 		})
 	}

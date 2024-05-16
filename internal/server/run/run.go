@@ -26,10 +26,13 @@ type Config struct {
 	StoreInterval   int    `env:"STORE_INTERVAL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
+	DataBaseDSN     string `env:"DATABASE_DSN"`
 }
 
 func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
-	hs := handlers.HandlerSettings{}
+	hs := handlers.HandlerSettings{
+		DatabaseDSN: cfg.DataBaseDSN,
+	}
 	if cfg.StoreInterval == 0 {
 		hs.StoreToFileSync = true
 		hs.FilePath = cfg.FileStoragePath
@@ -60,6 +63,7 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 			})
 		})
 	})
+	r.Post("/updates/", h.HandleUpdateBatchJSON)
 
 	r.Route("/value", func(r chi.Router) {
 		r.Post("/", h.HandleValueJSON)
@@ -67,22 +71,41 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 		r.Get("/counter/{name}", h.HandleGetCounter)
 	})
 
+	r.Get("/ping", h.HandlePing)
 	r.Get("/", h.HandleGetAll)
 
 	return r
 }
 
 func Run(cfg *Config) error {
-	store := storage.NewMemStorage()
+	var store storage.Storage
 	logger := logger.NewSlogLogger()
 
-	if cfg.Restore && cfg.FileStoragePath != "" {
-		err := store.LoadFromFile(cfg.FileStoragePath)
+	if cfg.DataBaseDSN != "" {
+		innerStore, err := storage.NewDBStorage(cfg.DataBaseDSN)
 		if err != nil {
-			logger.Info("Load from file", "error", err)
+			return err
+		}
+
+		dbstore := storage.NewDBRetryStorage(innerStore)
+		store = dbstore
+	} else {
+		store = storage.NewMemStorage()
+	}
+
+	if cfg.Restore && cfg.FileStoragePath != "" {
+		if memStore, ok := store.(*storage.MemStorage); ok {
+			err := memStore.LoadFromFile(cfg.FileStoragePath)
+			if err != nil {
+				logger.Info("Load from file", "error", err)
+			}
 		}
 	}
 
+	return serverStart(store, cfg, logger)
+}
+
+func serverStart(store storage.Storage, cfg *Config, logger logger.Logger) error {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -96,28 +119,36 @@ func Run(cfg *Config) error {
 	if cfg.StoreInterval > 0 {
 		go func() {
 			for {
-				if err := store.SaveToFile(cfg.FileStoragePath); err != nil {
-					logger.Info("Save to dump", "error", err)
+				if memStore, ok := store.(*storage.MemStorage); ok {
+					if err := memStore.SaveToFile(cfg.FileStoragePath); err != nil {
+						logger.Info("Save to dump", "error", err)
+					}
+					time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 				}
-				time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
 			}
 		}()
 	}
 
+	finalize(store, server, cfg, logger)
+
+	logger.Info("Running server on ", "address", cfg.Address)
+	return server.ListenAndServe()
+}
+
+func finalize(store storage.Storage, server *http.Server, cfg *Config, logger logger.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigs
 
-		if err := store.SaveToFile(cfg.FileStoragePath); err != nil {
-			logger.Info("Save to dump", "error", err)
+		if memStore, ok := store.(*storage.MemStorage); ok {
+			if err := memStore.SaveToFile(cfg.FileStoragePath); err != nil {
+				logger.Info("Save to dump", "error", err)
+			}
 		}
 
 		if err := server.Shutdown(context.Background()); err != nil {
 			logger.Info("Server shutdown", "error", err)
 		}
 	}()
-
-	logger.Info("Running server on ", "address", cfg.Address)
-	return server.ListenAndServe()
 }

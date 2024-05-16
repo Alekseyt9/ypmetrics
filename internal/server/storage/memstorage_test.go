@@ -1,10 +1,12 @@
 package storage_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGaugeStorage(t *testing.T) {
@@ -41,12 +43,15 @@ func TestGaugeStorage(t *testing.T) {
 	}
 
 	store := storage.NewMemStorage()
+	ctx := context.Background()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			store.SetGauge(test.metric, test.set)
-			v, ok := store.GetGauge(test.metric)
-			assert.True(t, ok)
+			err := store.SetGauge(ctx, test.metric, test.set)
+			require.NoError(t, err)
+			var v float64
+			v, err = store.GetGauge(ctx, test.metric)
+			require.NoError(t, err)
 			assert.InDelta(t, test.want, v, 0.01)
 		})
 	}
@@ -86,12 +91,15 @@ func TestCounterStorage(t *testing.T) {
 	}
 
 	store := storage.NewMemStorage()
+	ctx := context.Background()
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			store.SetCounter(test.metric, test.set)
-			v, ok := store.GetCounter(test.metric)
-			assert.True(t, ok)
+			err := store.SetCounter(ctx, test.metric, test.set)
+			require.NoError(t, err)
+			var v int64
+			v, err = store.GetCounter(ctx, test.metric)
+			require.NoError(t, err)
 			assert.InDelta(t, test.want, v, 0.01)
 		})
 	}

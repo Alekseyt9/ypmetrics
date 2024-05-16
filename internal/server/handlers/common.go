@@ -14,6 +14,7 @@ type Handler struct {
 type HandlerSettings struct {
 	StoreToFileSync bool // сохранять сразу после изменения значений
 	FilePath        string
+	DatabaseDSN     string
 }
 
 func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
@@ -25,9 +26,11 @@ func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
 
 func (h *Handler) StoreToFile() {
 	if h.settings.StoreToFileSync {
-		err := h.store.SaveToFile(h.settings.FilePath)
-		if err != nil {
-			h.log.Error("Error save to file", "filepath", h.settings.FilePath)
+		if memStore, ok := h.store.(*storage.MemStorage); ok {
+			err := memStore.SaveToFile(h.settings.FilePath)
+			if err != nil {
+				h.log.Error("Error save to file", "filepath", h.settings.FilePath)
+			}
 		}
 	}
 }

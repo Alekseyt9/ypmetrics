@@ -33,7 +33,7 @@ func BrotliDecompress(compressedData []byte) ([]byte, error) {
 	return decompressedData, nil
 }
 
-func GzipCompress(data []byte) ([]byte, error) {
+func GZIPCompress(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
 
