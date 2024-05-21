@@ -19,7 +19,7 @@ func New(jobCount int) *WorkerPool {
 }
 
 func (wp *WorkerPool) Run() {
-	for i := 0; i < wp.jobCount; i++ {
+	for range wp.jobCount {
 		wp.wg.Add(1)
 		go wp.worker()
 	}

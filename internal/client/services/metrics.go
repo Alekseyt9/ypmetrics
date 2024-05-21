@@ -60,7 +60,7 @@ func UpdateMetrics1(stat *Stat, counter int64) error {
 	return nil
 }
 
-func UpdateMetrics2(stat *Stat, counter int64) error {
+func UpdateMetrics2(stat *Stat, _ int64) error {
 	v, err := mem.VirtualMemory()
 	if err != nil {
 		return err

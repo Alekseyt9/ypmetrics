@@ -28,7 +28,6 @@ type Config struct {
 
 func Run(cfg *Config) {
 	pollInterval := cfg.PollInterval
-	reportInterval := cfg.ReportInterval
 	var counter int64
 
 	stat := &services.Stat{
@@ -37,7 +36,6 @@ func Run(cfg *Config) {
 			Gauges:   make([]common.GaugeItem, 0),
 		},
 	}
-	client := resty.New()
 
 	go func() {
 		for {
@@ -61,8 +59,26 @@ func Run(cfg *Config) {
 		}
 	}()
 
-	workerPool := workerpool.New(5)
+	workerPool := workerpool.New(cfg.RateLimit)
 	workerPool.Run()
+
+	runSend(cfg, workerPool, stat, &counter)
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-signals
+		workerPool.Close()
+		os.Exit(0)
+	}()
+
+	select {}
+}
+
+func runSend(cfg *Config, workerPool *workerpool.WorkerPool, stat *services.Stat, counter *int64) {
+	client := resty.New()
+	reportInterval := cfg.ReportInterval
 
 	go func() {
 		retryCtr := retry.NewControllerStd(func(err error) bool {
@@ -87,21 +103,10 @@ func Run(cfg *Config) {
 				if err != nil {
 					log.Print(err)
 				}
-				atomic.StoreInt64(&counter, 0)
+				atomic.StoreInt64(counter, 0)
 			})
 
 			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}
 	}()
-
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-signals
-		workerPool.Close()
-		os.Exit(0)
-	}()
-
-	select {}
 }

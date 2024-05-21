@@ -6,6 +6,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateMetrics(t *testing.T) {
@@ -32,7 +33,8 @@ func TestUpdateMetrics(t *testing.T) {
 		"PollCount",
 	}
 
-	services.UpdateMetrics1(stat, counter)
+	err := services.UpdateMetrics1(stat, counter)
+	require.NoError(t, err)
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {
