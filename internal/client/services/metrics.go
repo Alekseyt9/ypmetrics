@@ -4,12 +4,16 @@ import (
 	"fmt"
 	"math/rand"
 	"runtime"
-	"strconv"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/go-resty/resty/v2"
 	"github.com/mailru/easyjson"
 )
+
+type SendOptions struct {
+	BaseURL string
+	HashKey string
+}
 
 func UpdateMetrics(stat *Stat, counter int64) {
 	ms := runtime.MemStats{}
@@ -53,7 +57,7 @@ func UpdateMetrics(stat *Stat, counter int64) {
 	stat.AddCounter("PollCount", counter)
 }
 
-func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
+func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error {
 	if len(stat.Data.Counters) == 0 && len(stat.Data.Gauges) == 0 {
 		return nil
 	}
@@ -69,128 +73,22 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 		return fmt.Errorf("data compress error: %w", err)
 	}
 
-	_, err = client.R().
+	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Accept-Encoding", "gzip").
-		SetBody(compressedOut).
-		Post("http://" + baseURL + "/updates/")
+		SetHeader("Accept-Encoding", "gzip")
+
+	if opts.HashKey != "" {
+		out := common.HashSHA256(compressedOut, []byte(opts.HashKey))
+		request.SetHeader("HashSHA256", out)
+	}
+
+	_, err = request.SetBody(compressedOut).
+		Post("http://" + opts.BaseURL + "/updates/")
 
 	if err != nil {
 		return fmt.Errorf("error executing request: %w", err)
 	}
 
 	return nil
-}
-
-func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
-	statCopy := copyStat(stat)
-
-	for _, item := range statCopy.Gauges {
-		data := common.Metrics{
-			ID:    item.Name,
-			MType: "gauge",
-			Value: &item.Value, //nolint:gosec //version 1.22.2
-		}
-
-		out, err := easyjson.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("JSON marshalling error: %w", err)
-		}
-
-		compressedOut, err := common.GZIPCompress(out)
-		if err != nil {
-			return fmt.Errorf("data compress error: %w", err)
-		}
-
-		_, err = client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetHeader("Accept-Encoding", "gzip").
-			SetBody(compressedOut).
-			Post("http://" + baseURL + "/update")
-
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	for _, item := range statCopy.Counters {
-		data := common.Metrics{
-			ID:    item.Name,
-			MType: "counter",
-			Delta: &item.Value, //nolint:gosec //version 1.22.2
-		}
-		out, err := easyjson.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("JSON marshalling error: %w", err)
-		}
-
-		compressedOut, err := common.GZIPCompress(out)
-		if err != nil {
-			return fmt.Errorf("data compress error: %w", err)
-		}
-
-		_, err = client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetHeader("Accept-Encoding", "gzip").
-			SetBody(compressedOut).
-			Post("http://" + baseURL + "/update")
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
-	statCopy := copyStat(stat)
-
-	for _, item := range statCopy.Gauges {
-		_, err := client.R().
-			SetHeader("Content-Type", "text/plain").
-			SetPathParams(map[string]string{
-				"type":  item.Name,
-				"value": strconv.FormatFloat(item.Value, 'f', -1, 64),
-			}).
-			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	for _, item := range statCopy.Counters {
-		_, err := client.R().
-			SetHeader("Content-Type", "text/plain").
-			SetPathParams(map[string]string{
-				"type":  item.Name,
-				"value": strconv.FormatInt(item.Value, 10),
-			}).
-			Post("http://" + baseURL + "/update/counter/{type}/{value}")
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func copyStat(stat *Stat) common.MetricItems {
-	dataCopy := common.MetricItems{
-		Counters: make([]common.CounterItem, 0, len(stat.Data.Counters)),
-		Gauges:   make([]common.GaugeItem, 0, len(stat.Data.Counters)),
-	}
-
-	stat.Lock.RLock()
-	defer stat.Lock.RUnlock()
-	for _, item := range stat.Data.Gauges {
-		dataCopy.Gauges = append(dataCopy.Gauges, common.GaugeItem{Name: item.Name, Value: item.Value})
-	}
-	for _, item := range stat.Data.Counters {
-		dataCopy.Counters = append(dataCopy.Counters, common.CounterItem{Name: item.Name, Value: item.Value})
-	}
-
-	return dataCopy
 }

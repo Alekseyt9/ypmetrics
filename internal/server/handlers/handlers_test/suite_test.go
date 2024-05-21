@@ -4,7 +4,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/suite"

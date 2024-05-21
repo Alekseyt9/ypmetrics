@@ -24,6 +24,13 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
+	hash := r.Header.Get("HashSHA256")
+	if hash != "" && h.settings.HashKey != "" {
+		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+			http.Error(w, "hash check error", http.StatusBadRequest)
+		}
+	}
+
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		body, err = common.GZIPDecompress(body)
 		if err != nil {
@@ -100,6 +107,13 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
+	hash := r.Header.Get("HashSHA256")
+	if hash != "" && h.settings.HashKey != "" {
+		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+			http.Error(w, "hash check error", http.StatusBadRequest)
+		}
+	}
+
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		body, err = common.GZIPDecompress(body)
 		if err != nil {
@@ -172,6 +186,13 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
+	}
+
+	hash := r.Header.Get("HashSHA256")
+	if hash != "" && h.settings.HashKey != "" {
+		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+			http.Error(w, "hash check error", http.StatusBadRequest)
+		}
 	}
 
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
