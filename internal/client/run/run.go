@@ -21,6 +21,7 @@ type Config struct {
 	Address        string `env:"ADDRESS"`
 	ReportInterval int    `env:"REPORT_INTERVAL"`
 	PollInterval   int    `env:"POLL_INTERVAL"`
+	HashKey        string `wnv:"KEY"`
 }
 
 func Run(cfg *Config) {
@@ -55,8 +56,12 @@ func Run(cfg *Config) {
 				}
 				return false
 			})
+			sendOpts := &services.SendOptions{
+				BaseURL: cfg.Address,
+				HashKey: cfg.HashKey,
+			}
 			err := retryCtr.Do(func() error {
-				return services.SendMetricsBatch(client, cfg.Address, stat)
+				return services.SendMetricsBatch(client, stat, sendOpts)
 			})
 			if err != nil {
 				log.Print(err)

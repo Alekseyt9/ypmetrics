@@ -8,9 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Alekseyt9/ypmetrics/internal/server/compress"
 	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
-	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 )
@@ -27,11 +28,13 @@ type Config struct {
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	Restore         bool   `env:"RESTORE"`
 	DataBaseDSN     string `env:"DATABASE_DSN"`
+	HashKey         string `env:"KEY"`
 }
 
 func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 	hs := handlers.HandlerSettings{
 		DatabaseDSN: cfg.DataBaseDSN,
+		HashKey:     cfg.HashKey,
 	}
 	if cfg.StoreInterval == 0 {
 		hs.StoreToFileSync = true
@@ -46,6 +49,9 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 		return logger.WithLogging(next, log)
 	})
 	r.Use(compress.WithCompress)
+	r.Use(func(next http.Handler) http.Handler {
+		return hash.WithHash(next, cfg.HashKey)
+	})
 
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", h.HandleUpdateJSON)
