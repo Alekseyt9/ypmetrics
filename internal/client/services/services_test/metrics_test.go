@@ -32,7 +32,7 @@ func TestUpdateMetrics(t *testing.T) {
 		"PollCount",
 	}
 
-	services.UpdateMetrics(stat, counter)
+	services.UpdateMetrics1(stat, counter)
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {

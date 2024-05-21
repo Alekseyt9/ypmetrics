@@ -21,7 +21,10 @@ func (w hashWriter) Write(b []byte) (int, error) {
 		return n, err
 	}
 
-	w.Hash.Write(b)
+	if w.Hash != nil {
+		w.Hash.Write(b)
+	}
+
 	return n, nil
 }
 

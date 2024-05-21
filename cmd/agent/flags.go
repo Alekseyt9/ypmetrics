@@ -15,6 +15,7 @@ func ParseFlags(cfg *run.Config) {
 	reportInterval := flag.IntP("reportInterval", "r", 10, "frequency of sending metrics to the server")
 	pollInterval := flag.IntP("pollInterval", "p", 2, "frequency of polling metrics from the runtime package")
 	key := flag.StringP("key", "k", "", "key for SHA256 signing")
+	rateLimit := flag.IntP("rateLimit", "l", 5, "upper limit on the number of outgoing requests")
 
 	flag.Parse()
 
@@ -22,6 +23,7 @@ func ParseFlags(cfg *run.Config) {
 	cfg.ReportInterval = *reportInterval
 	cfg.PollInterval = *pollInterval
 	cfg.HashKey = *key
+	cfg.RateLimit = *rateLimit
 }
 
 func SetEnv(cfg *run.Config) {

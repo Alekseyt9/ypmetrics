@@ -11,11 +11,21 @@ type Stat struct {
 	Lock sync.RWMutex
 }
 
-func (s *Stat) AddGauge(name string, value float64) {
+func (s *Stat) AddOrUpdateGauge(name string, value float64) {
+	old, ok := s.FindGauge(name)
+	if ok {
+		old.Value = value
+		return
+	}
 	s.Data.Gauges = append(s.Data.Gauges, common.GaugeItem{Name: name, Value: value})
 }
 
-func (s *Stat) AddCounter(name string, value int64) {
+func (s *Stat) AddOrUpdateCounter(name string, value int64) {
+	old, ok := s.FindCounter(name)
+	if ok {
+		old.Value = value
+		return
+	}
 	s.Data.Counters = append(s.Data.Counters, common.CounterItem{Name: name, Value: value})
 }
 
