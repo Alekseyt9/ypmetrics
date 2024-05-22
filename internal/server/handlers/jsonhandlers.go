@@ -24,6 +24,17 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
+	hash := r.Header.Get("HashSHA256")
+	if hash != "" {
+		if h.settings.HashKey != "" {
+			if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+				http.Error(w, "hash check error", http.StatusBadRequest)
+			}
+		} else {
+			h.log.Error("hash key not specified")
+		}
+	}
+
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 		body, err = common.GZIPDecompress(body)
 		if err != nil {
@@ -37,14 +48,31 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
 	}
 
-	var restData = common.Metrics{
+	resData := h.setMetrics(w, r, &data)
+	h.StoreToFile()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	out, err := easyjson.Marshal(resData)
+	if err != nil {
+		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
+	}
+	_, err = w.Write(out)
+	if err != nil {
+		http.Error(w, "error write body", http.StatusBadRequest)
+	}
+}
+
+func (h *Handler) setMetrics(w http.ResponseWriter, r *http.Request, data *common.Metrics) *common.Metrics {
+	var resData = &common.Metrics{
 		MType: data.MType,
 		ID:    data.ID,
 	}
 
 	switch data.MType {
 	case "gauge":
-		err = h.store.SetGauge(r.Context(), data.ID, *data.Value)
+		err := h.store.SetGauge(r.Context(), data.ID, *data.Value)
 		if err != nil {
 			http.Error(w, "error SetGauge", http.StatusBadRequest)
 		}
@@ -57,10 +85,10 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 			}
 			http.Error(w, "error GetGauge", http.StatusBadRequest)
 		}
-		restData.Value = &v
+		resData.Value = &v
 
 	case "counter":
-		err = h.store.SetCounter(r.Context(), data.ID, *data.Delta)
+		err := h.store.SetCounter(r.Context(), data.ID, *data.Delta)
 		if err != nil {
 			http.Error(w, "error SetCounter", http.StatusBadRequest)
 		}
@@ -70,22 +98,10 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(w, "error GetCounter", http.StatusBadRequest)
 		}
-		restData.Delta = &v
+		resData.Delta = &v
 	}
 
-	h.StoreToFile()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	out, err := easyjson.Marshal(restData)
-	if err != nil {
-		http.Error(w, "error marshaling JSON", http.StatusBadRequest)
-	}
-	_, err = w.Write(out)
-	if err != nil {
-		http.Error(w, "error write body", http.StatusBadRequest)
-	}
+	return resData
 }
 
 func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
@@ -98,6 +114,13 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
+	}
+
+	hash := r.Header.Get("HashSHA256")
+	if hash != "" && h.settings.HashKey != "" {
+		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+			http.Error(w, "hash check error", http.StatusBadRequest)
+		}
 	}
 
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
@@ -172,6 +195,13 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
+	}
+
+	hash := r.Header.Get("HashSHA256")
+	if hash != "" && h.settings.HashKey != "" {
+		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+			http.Error(w, "hash check error", http.StatusBadRequest)
+		}
 	}
 
 	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {

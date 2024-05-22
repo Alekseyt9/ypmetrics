@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
@@ -12,9 +12,10 @@ type Handler struct {
 }
 
 type HandlerSettings struct {
-	StoreToFileSync bool // сохранять сразу после изменения значений
+	StoreToFileSync bool
 	FilePath        string
 	DatabaseDSN     string
+	HashKey         string
 }
 
 func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {

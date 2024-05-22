@@ -9,7 +9,7 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // needs for init
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 

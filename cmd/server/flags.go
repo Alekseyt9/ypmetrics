@@ -10,14 +10,16 @@ import (
 
 func ParseFlags(cfg *run.Config) {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
+
 	address := flag.StringP("address", "a", "localhost:8080", "Address and port to run server")
 	storeInterval := flag.IntP("store-interval", "i", 300,
-		"Time interval in seconds, based on which the current state of the server is displayed on disk")
+		"time interval in seconds, based on which the current state of the server is displayed on disk")
 	fileStoragePath := flag.StringP("file-storage-path", "f", "/tmp/metrics-db.json",
-		"Full name of the file where the current values are saved")
+		"full name of the file where the current values are saved")
 	restore := flag.BoolP("restore", "r", true,
-		"Load previously saved values from the file when the server starts")
+		"load previously saved values from the file when the server starts")
 	database := flag.StringP("database", "d", "", "Database connection string")
+	key := flag.StringP("key", "k", "", "key for SHA256 signing")
 
 	flag.Parse()
 
@@ -26,6 +28,7 @@ func ParseFlags(cfg *run.Config) {
 	cfg.FileStoragePath = *fileStoragePath
 	cfg.Restore = *restore
 	cfg.DataBaseDSN = *database
+	cfg.HashKey = *key
 }
 
 func SetEnv(cfg *run.Config) {
