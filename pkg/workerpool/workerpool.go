@@ -5,36 +5,32 @@ import "sync"
 type Task func()
 
 type WorkerPool struct {
-	tasks     chan Task
-	jobCount  int
-	wg        sync.WaitGroup
-	addTaskWg sync.WaitGroup
+	tasks chan Task
+	wg    sync.WaitGroup
 }
 
-func New(jobCount int) *WorkerPool {
-	return &WorkerPool{
-		jobCount: jobCount,
-		tasks:    make(chan Task),
+const workerPoolQueueSize = 5
+
+func New(workerCount int) *WorkerPool {
+	return NewWithQS(workerCount, workerPoolQueueSize)
+}
+
+func NewWithQS(workerCount int, queueCount int) *WorkerPool {
+	wp := &WorkerPool{
+		tasks: make(chan Task, queueCount),
 	}
-}
-
-func (wp *WorkerPool) Run() {
-	for range wp.jobCount {
+	for range workerCount {
 		wp.wg.Add(1)
 		go wp.worker()
 	}
+	return wp
 }
 
 func (wp *WorkerPool) AddTask(task Task) {
-	wp.addTaskWg.Add(1)
-	go func() {
-		defer wp.addTaskWg.Done()
-		wp.tasks <- task
-	}()
+	wp.tasks <- task
 }
 
 func (wp *WorkerPool) Close() {
-	wp.addTaskWg.Wait()
 	close(wp.tasks)
 	wp.wg.Wait()
 }

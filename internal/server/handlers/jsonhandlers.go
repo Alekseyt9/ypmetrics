@@ -25,9 +25,13 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hash := r.Header.Get("HashSHA256")
-	if hash != "" && h.settings.HashKey != "" {
-		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
-			http.Error(w, "hash check error", http.StatusBadRequest)
+	if hash != "" {
+		if h.settings.HashKey != "" {
+			if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+				http.Error(w, "hash check error", http.StatusBadRequest)
+			}
+		} else {
+			h.log.Error("hash key not specified")
 		}
 	}
 

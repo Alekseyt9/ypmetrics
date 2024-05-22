@@ -19,10 +19,32 @@ type SendOptions struct {
 	HashKey string
 }
 
-func UpdateMetrics1(stat *Stat, counter int64) error {
+type MetricsData struct {
+	StatRuntime  *Stat
+	StatGopsutil *Stat
+}
+
+func NewMetricsData() *MetricsData {
+	statRuntime := &Stat{
+		Data: &common.MetricItems{
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
+		},
+	}
+	statGopsutil := &Stat{
+		Data: &common.MetricItems{
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
+		},
+	}
+	return &MetricsData{StatRuntime: statRuntime, StatGopsutil: statGopsutil}
+}
+
+func UpdateMetrics(data *MetricsData, counter int64) error {
 	ms := runtime.MemStats{}
 	runtime.ReadMemStats(&ms)
 
+	stat := data.StatRuntime
 	stat.Lock.Lock()
 	defer stat.Lock.Unlock()
 
@@ -57,10 +79,7 @@ func UpdateMetrics1(stat *Stat, counter int64) error {
 	stat.AddOrUpdateGauge("RandomValue", rand.Float64()) //nolint:gosec //rand хватает
 	stat.AddOrUpdateCounter("PollCount", counter)
 
-	return nil
-}
-
-func UpdateMetrics2(stat *Stat, _ int64) error {
+	stat = data.StatGopsutil
 	v, err := mem.VirtualMemory()
 	if err != nil {
 		return err

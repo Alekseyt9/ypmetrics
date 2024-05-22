@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
-	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/Alekseyt9/ypmetrics/pkg/workerpool"
 	"github.com/go-resty/resty/v2"
@@ -30,27 +29,11 @@ func Run(cfg *Config) {
 	pollInterval := cfg.PollInterval
 	var counter int64
 
-	stat := &services.Stat{
-		Data: &common.MetricItems{
-			Counters: make([]common.CounterItem, 0),
-			Gauges:   make([]common.GaugeItem, 0),
-		},
-	}
+	data := services.NewMetricsData()
 
 	go func() {
 		for {
-			err := services.UpdateMetrics1(stat, counter)
-			if err != nil {
-				log.Print(err)
-			}
-			atomic.AddInt64(&counter, 1)
-			time.Sleep(time.Duration(pollInterval) * time.Second)
-		}
-	}()
-
-	go func() {
-		for {
-			err := services.UpdateMetrics2(stat, counter)
+			err := services.UpdateMetrics(data, counter)
 			if err != nil {
 				log.Print(err)
 			}
@@ -60,9 +43,7 @@ func Run(cfg *Config) {
 	}()
 
 	workerPool := workerpool.New(cfg.RateLimit)
-	workerPool.Run()
-
-	runSend(cfg, workerPool, stat, &counter)
+	runSend(cfg, workerPool, data, &counter)
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
@@ -76,7 +57,7 @@ func Run(cfg *Config) {
 	select {}
 }
 
-func runSend(cfg *Config, workerPool *workerpool.WorkerPool, stat *services.Stat, counter *int64) {
+func runSend(cfg *Config, workerPool *workerpool.WorkerPool, data *services.MetricsData, counter *int64) {
 	client := resty.New()
 	reportInterval := cfg.ReportInterval
 
@@ -96,9 +77,20 @@ func runSend(cfg *Config, workerPool *workerpool.WorkerPool, stat *services.Stat
 		}
 
 		for {
+			// Отправляем разные наборы метрик
 			workerPool.AddTask(func() {
 				err := retryCtr.Do(func() error {
-					return services.SendMetricsBatch(client, stat, sendOpts)
+					return services.SendMetricsBatch(client, data.StatRuntime, sendOpts)
+				})
+				if err != nil {
+					log.Print(err)
+				}
+				atomic.StoreInt64(counter, 0)
+			})
+
+			workerPool.AddTask(func() {
+				err := retryCtr.Do(func() error {
+					return services.SendMetricsBatch(client, data.StatGopsutil, sendOpts)
 				})
 				if err != nil {
 					log.Print(err)
