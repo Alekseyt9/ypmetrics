@@ -1,14 +1,15 @@
 package handlers
 
 import (
-	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
+	"log/slog"
+
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
 type Handler struct {
 	store    storage.Storage
 	settings HandlerSettings
-	log      logger.Logger
+	log      *slog.Logger
 }
 
 type HandlerSettings struct {

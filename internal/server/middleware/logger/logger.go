@@ -1,19 +1,18 @@
 package logger
 
 import (
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 )
 
-// Абстрагируемся от реализации.
-type Logger interface {
-	Debug(template string, keysAndValues ...interface{})
-	Info(template string, keysAndValues ...interface{})
-	Warn(template string, keysAndValues ...interface{})
-	Error(template string, keysAndValues ...interface{})
+func NewSlogLogger() *slog.Logger {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	return logger
 }
 
-func WithLogging(h http.Handler, log Logger) http.Handler {
+func WithLogging(h http.Handler, log *slog.Logger) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

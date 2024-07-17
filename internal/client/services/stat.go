@@ -30,18 +30,18 @@ func (s *Stat) AddOrUpdateCounter(name string, value int64) {
 }
 
 func (s *Stat) FindGauge(name string) (*common.GaugeItem, bool) {
-	for _, item := range s.Data.Gauges {
-		if item.Name == name {
-			return &item, true
+	for i := 0; i < len(s.Data.Gauges); i++ {
+		if s.Data.Gauges[i].Name == name {
+			return &s.Data.Gauges[i], true
 		}
 	}
 	return nil, false
 }
 
 func (s *Stat) FindCounter(name string) (*common.CounterItem, bool) {
-	for _, item := range s.Data.Counters {
-		if item.Name == name {
-			return &item, true
+	for i := 0; i < len(s.Data.Counters); i++ {
+		if s.Data.Counters[i].Name == name {
+			return &s.Data.Counters[i], true
 		}
 	}
 	return nil, false

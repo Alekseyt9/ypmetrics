@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,7 +32,7 @@ type Config struct {
 	HashKey         string `env:"KEY"`
 }
 
-func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
+func Router(store storage.Storage, log *slog.Logger, cfg *Config) chi.Router {
 	hs := handlers.HandlerSettings{
 		DatabaseDSN: cfg.DataBaseDSN,
 		HashKey:     cfg.HashKey,
@@ -111,7 +112,7 @@ func Run(cfg *Config) error {
 	return serverStart(store, cfg, logger)
 }
 
-func serverStart(store storage.Storage, cfg *Config, logger logger.Logger) error {
+func serverStart(store storage.Storage, cfg *Config, logger *slog.Logger) error {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -141,7 +142,7 @@ func serverStart(store storage.Storage, cfg *Config, logger logger.Logger) error
 	return server.ListenAndServe()
 }
 
-func finalize(store storage.Storage, server *http.Server, cfg *Config, logger logger.Logger) {
+func finalize(store storage.Storage, server *http.Server, cfg *Config, logger *slog.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
