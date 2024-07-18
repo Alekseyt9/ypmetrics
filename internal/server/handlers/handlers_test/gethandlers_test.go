@@ -153,7 +153,7 @@ func BenchmarkHandleGet(b *testing.B) {
 	require.NoError(b, store.SetGauge(ctx, "g1", float64(1)))
 	require.NoError(b, store.SetCounter(ctx, "c1", int64(1)))
 
-	b.Run("gauge", func(b *testing.B) {
+	b.Run("gauge_value", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			reqg, err := http.NewRequest(http.MethodGet, ts.URL+"/value/gauge/g1", nil)
 			require.NoError(b, err)
@@ -163,7 +163,7 @@ func BenchmarkHandleGet(b *testing.B) {
 		}
 	})
 
-	b.Run("counter", func(b *testing.B) {
+	b.Run("counter_value", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			reqg, err := http.NewRequest(http.MethodGet, ts.URL+"/value/counter/c1", nil)
 			require.NoError(b, err)
@@ -172,5 +172,4 @@ func BenchmarkHandleGet(b *testing.B) {
 			defer respg.Body.Close()
 		}
 	})
-
 }
