@@ -15,12 +15,13 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
-	readTimeout  = 5 * time.Second
-	writeTimeout = 10 * time.Second
-	idleTimeout  = 15 * time.Second
+	readTimeout  = 1 * time.Minute
+	writeTimeout = 1 * time.Minute
+	idleTimeout  = 1 * time.Minute
 )
 
 type Config struct {
@@ -45,14 +46,17 @@ func Router(store storage.Storage, log *slog.Logger, cfg *Config) chi.Router {
 	h := handlers.NewHandler(store, hs)
 	r := chi.NewRouter()
 
-	// тк использую библиотеку chi - подключаю middleware стандартным способом
 	r.Use(func(next http.Handler) http.Handler {
 		return logger.WithLogging(next, log)
 	})
-	r.Use(compress.WithCompress)
+	r.Use(func(next http.Handler) http.Handler {
+		return compress.WithCompress(next, log)
+	})
 	r.Use(func(next http.Handler) http.Handler {
 		return hash.WithHash(next, cfg.HashKey)
 	})
+
+	r.Mount("/debug", middleware.Profiler())
 
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", h.HandleUpdateJSON)

@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"compress/gzip"
 	"errors"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/pool"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/mailru/easyjson"
 	"golang.org/x/net/context"
@@ -18,7 +20,16 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
-	body, err := io.ReadAll(r.Body)
+	var body []byte
+	var err error
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		wps := pool.GetZipReaderPool(h.log)
+		gz := wps.WriterPool.Get().(*gzip.Reader)
+		defer wps.WriterPool.Put(gz)
+		body, err = common.GZIPdecompressreader(r.Body, gz)
+	} else {
+		body, err = io.ReadAll(r.Body)
+	}
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
@@ -32,13 +43,6 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			h.log.Error("hash key not specified")
-		}
-	}
-
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		body, err = common.GZIPDecompress(body)
-		if err != nil {
-			http.Error(w, "error decompress gzip", http.StatusBadRequest)
 		}
 	}
 
@@ -110,7 +114,16 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
-	body, err := io.ReadAll(r.Body)
+	var body []byte
+	var err error
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		wps := pool.GetZipReaderPool(h.log)
+		gz := wps.WriterPool.Get().(*gzip.Reader)
+		defer wps.WriterPool.Put(gz)
+		body, err = common.GZIPdecompressreader(r.Body, gz)
+	} else {
+		body, err = io.ReadAll(r.Body)
+	}
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
@@ -120,13 +133,6 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	if hash != "" && h.settings.HashKey != "" {
 		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
 			http.Error(w, "hash check error", http.StatusBadRequest)
-		}
-	}
-
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		body, err = common.GZIPDecompress(body)
-		if err != nil {
-			http.Error(w, "error decompress GZIP", http.StatusBadRequest)
 		}
 	}
 
@@ -191,7 +197,16 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
-	body, err := io.ReadAll(r.Body)
+	var body []byte
+	var err error
+	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
+		wps := pool.GetZipReaderPool(h.log)
+		gz := wps.WriterPool.Get().(*gzip.Reader)
+		defer wps.WriterPool.Put(gz)
+		body, err = common.GZIPdecompressreader(r.Body, gz)
+	} else {
+		body, err = io.ReadAll(r.Body)
+	}
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
@@ -201,13 +216,6 @@ func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) 
 	if hash != "" && h.settings.HashKey != "" {
 		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
 			http.Error(w, "hash check error", http.StatusBadRequest)
-		}
-	}
-
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		body, err = common.GZIPDecompress(body)
-		if err != nil {
-			http.Error(w, "error decompress gzip", http.StatusBadRequest)
 		}
 	}
 

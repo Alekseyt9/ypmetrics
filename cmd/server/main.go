@@ -1,6 +1,8 @@
 package main
 
 import (
+	_ "net/http/pprof"
+
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
