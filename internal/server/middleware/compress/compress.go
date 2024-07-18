@@ -3,11 +3,11 @@ package compress
 import (
 	"compress/gzip"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common/pool"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 )
 
 type compressWriter struct {
@@ -19,7 +19,7 @@ func (w compressWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-func WithCompress(next http.Handler, log *slog.Logger) http.Handler {
+func WithCompress(next http.Handler, log log.Logger) http.Handler {
 	compressFn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			handlegzip(w, r, next, log)
@@ -31,7 +31,7 @@ func WithCompress(next http.Handler, log *slog.Logger) http.Handler {
 	return http.HandlerFunc(compressFn)
 }
 
-func handlegzip(w http.ResponseWriter, r *http.Request, next http.Handler, log *slog.Logger) {
+func handlegzip(w http.ResponseWriter, r *http.Request, next http.Handler, log log.Logger) {
 	wps := pool.GetZipWriterPool(log)
 	gz := wps.WriterPool.Get().(*gzip.Writer)
 	defer wps.WriterPool.Put(gz)

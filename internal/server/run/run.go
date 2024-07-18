@@ -2,7 +2,6 @@ package run
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
@@ -33,7 +33,7 @@ type Config struct {
 	HashKey         string `env:"KEY"`
 }
 
-func Router(store storage.Storage, log *slog.Logger, cfg *Config) chi.Router {
+func Router(store storage.Storage, log log.Logger, cfg *Config) chi.Router {
 	hs := handlers.HandlerSettings{
 		DatabaseDSN: cfg.DataBaseDSN,
 		HashKey:     cfg.HashKey,
@@ -90,7 +90,7 @@ func Router(store storage.Storage, log *slog.Logger, cfg *Config) chi.Router {
 
 func Run(cfg *Config) error {
 	var store storage.Storage
-	logger := logger.NewSlogLogger()
+	logger := log.NewSlogLogger()
 
 	if cfg.DataBaseDSN != "" {
 		innerStore, err := storage.NewDBStorage(cfg.DataBaseDSN)
@@ -116,7 +116,7 @@ func Run(cfg *Config) error {
 	return serverStart(store, cfg, logger)
 }
 
-func serverStart(store storage.Storage, cfg *Config, logger *slog.Logger) error {
+func serverStart(store storage.Storage, cfg *Config, logger log.Logger) error {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -146,7 +146,7 @@ func serverStart(store storage.Storage, cfg *Config, logger *slog.Logger) error 
 	return server.ListenAndServe()
 }
 
-func finalize(store storage.Storage, server *http.Server, cfg *Config, logger *slog.Logger) {
+func finalize(store storage.Storage, server *http.Server, cfg *Config, logger log.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

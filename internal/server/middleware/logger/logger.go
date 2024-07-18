@@ -1,18 +1,13 @@
 package logger
 
 import (
-	"log/slog"
 	"net/http"
-	"os"
 	"time"
+
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 )
 
-func NewSlogLogger() *slog.Logger {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	return logger
-}
-
-func WithLogging(h http.Handler, log *slog.Logger) http.Handler {
+func WithLogging(h http.Handler, log log.Logger) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

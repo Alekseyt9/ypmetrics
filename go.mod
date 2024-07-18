@@ -3,7 +3,6 @@ module github.com/Alekseyt9/ypmetrics
 go 1.22
 
 require (
-	github.com/andybalholm/brotli v1.1.0
 	github.com/caarlos0/env v3.5.0+incompatible
 	github.com/caarlos0/env/v6 v6.10.1
 	github.com/go-chi/chi/v5 v5.0.12

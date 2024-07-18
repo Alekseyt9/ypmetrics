@@ -1,11 +1,16 @@
 package handlers_test
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
+	"github.com/Alekseyt9/ypmetrics/internal/server/run"
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -113,4 +118,59 @@ func (suite *TestSuite) TestHandlePing() {
 	defer resp.Body.Close()
 
 	assert.Equal(suite.T(), http.StatusOK, resp.StatusCode)
+}
+
+func BenchmarkHandleGetAll(b *testing.B) {
+	store := storage.NewMemStorage()
+	logger := log.NewNoOpLogger()
+	cfg := &run.Config{}
+	ts := httptest.NewServer(run.Router(store, logger, cfg))
+
+	ctx := context.Background()
+	for i := 0; i < 1000; i++ {
+		require.NoError(b, store.SetGauge(ctx, fmt.Sprintf("gauge%d", i), float64(i)))
+		require.NoError(b, store.SetCounter(ctx, fmt.Sprintf("counter%d", i), int64(i)))
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		reqg, err := http.NewRequest(http.MethodGet, ts.URL+"/", nil)
+		require.NoError(b, err)
+		respg, err := ts.Client().Do(reqg)
+		require.NoError(b, err)
+		defer respg.Body.Close()
+	}
+}
+
+func BenchmarkHandleGet(b *testing.B) {
+	store := storage.NewMemStorage()
+	logger := log.NewNoOpLogger()
+	cfg := &run.Config{}
+	ts := httptest.NewServer(run.Router(store, logger, cfg))
+
+	ctx := context.Background()
+	require.NoError(b, store.SetGauge(ctx, "g1", float64(1)))
+	require.NoError(b, store.SetCounter(ctx, "c1", int64(1)))
+
+	b.Run("gauge", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reqg, err := http.NewRequest(http.MethodGet, ts.URL+"/value/gauge/g1", nil)
+			require.NoError(b, err)
+			respg, err := ts.Client().Do(reqg)
+			require.NoError(b, err)
+			defer respg.Body.Close()
+		}
+	})
+
+	b.Run("counter", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reqg, err := http.NewRequest(http.MethodGet, ts.URL+"/value/counter/c1", nil)
+			require.NoError(b, err)
+			respg, err := ts.Client().Do(reqg)
+			require.NoError(b, err)
+			defer respg.Body.Close()
+		}
+	})
+
 }
