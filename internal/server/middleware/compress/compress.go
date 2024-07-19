@@ -1,3 +1,4 @@
+// Package compress provides middleware for an HTTP server that implements gzip compression for responses.
 package compress
 
 import (
@@ -15,10 +16,12 @@ type compressWriter struct {
 	Writer io.Writer
 }
 
+// Write compresses the data before writing it to the underlying ResponseWriter.
 func (w compressWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
+// WithCompress returns a middleware handler that adds gzip compression to the response if the client supports it.
 func WithCompress(next http.Handler, log log.Logger) http.Handler {
 	compressFn := func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
