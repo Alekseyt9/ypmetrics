@@ -1,3 +1,4 @@
+// Package main contains the main entry point and flag parsing for the agent.
 package main
 
 import (
@@ -8,6 +9,9 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+// ParseFlags parses command-line flags and sets the corresponding fields in the given Config.
+// Parameters:
+//   - cfg: the configuration structure to populate with parsed flag values
 func ParseFlags(cfg *run.Config) {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
@@ -26,6 +30,9 @@ func ParseFlags(cfg *run.Config) {
 	cfg.RateLimit = *rateLimit
 }
 
+// SetEnv parses environment variables and sets the corresponding fields in the given Config.
+// Parameters:
+//   - cfg: the configuration structure to populate with parsed environment variable values
 func SetEnv(cfg *run.Config) {
 	if err := env.Parse(cfg); err != nil {
 		panic(err)

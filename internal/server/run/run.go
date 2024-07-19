@@ -1,3 +1,4 @@
+// Package run provides the main execution logic for the server, including configuration and routing.
 package run
 
 import (
@@ -24,15 +25,23 @@ const (
 	idleTimeout  = 1 * time.Minute
 )
 
+// Config holds the configuration settings for the server.
 type Config struct {
-	Address         string `env:"ADDRESS"`
-	StoreInterval   int    `env:"STORE_INTERVAL"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE"`
-	DataBaseDSN     string `env:"DATABASE_DSN"`
-	HashKey         string `env:"KEY"`
+	Address         string `env:"ADDRESS"`           // Server address
+	StoreInterval   int    `env:"STORE_INTERVAL"`    // Interval for storing data to file
+	FileStoragePath string `env:"FILE_STORAGE_PATH"` // Path to the file for storing data
+	Restore         bool   `env:"RESTORE"`           // Flag to restore data from file on startup
+	DataBaseDSN     string `env:"DATABASE_DSN"`      // Database connection string
+	HashKey         string `env:"KEY"`               // Key for SHA256 signing
 }
 
+// Router sets up the router with the necessary routes and middleware.
+// Parameters:
+//   - store: the storage to use for handling metrics
+//   - log: the logger instance
+//   - cfg: the configuration settings for the server
+//
+// Returns a chi.Router with the configured routes and middleware.
 func Router(store storage.Storage, log log.Logger, cfg *Config) chi.Router {
 	hs := handlers.HandlerSettings{
 		DatabaseDSN: cfg.DataBaseDSN,
@@ -88,6 +97,12 @@ func Router(store storage.Storage, log log.Logger, cfg *Config) chi.Router {
 	return r
 }
 
+// Run starts the server with the given configuration.
+// It initializes the storage, restores data if necessary, and starts the server.
+// Parameters:
+//   - cfg: the configuration settings for the server
+//
+// Returns an error if the server fails to start.
 func Run(cfg *Config) error {
 	var store storage.Storage
 	logger := log.NewSlogLogger()

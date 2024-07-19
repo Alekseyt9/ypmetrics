@@ -1,3 +1,4 @@
+// Package main contains the main entry point and flag parsing for the server.
 package main
 
 import (
@@ -7,6 +8,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// main is the entry point for the server application.
+// It parses command-line flags and environment variables, then starts the server with the configured settings.
 func main() {
 	cfg := &run.Config{}
 	ParseFlags(cfg)
