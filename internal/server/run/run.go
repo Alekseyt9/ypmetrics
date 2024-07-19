@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"time"
 
-	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
+	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
