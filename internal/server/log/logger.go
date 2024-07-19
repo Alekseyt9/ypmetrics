@@ -1,3 +1,4 @@
+// Package log provides utilities for logging within the server.
 package log
 
 import (
@@ -5,10 +6,30 @@ import (
 	"os"
 )
 
+// Logger defines an interface for logging messages at various levels of severity.
 type Logger interface {
+	// Debug logs a message at the Debug level.
+	// Parameters:
+	//   - template: the message template to log
+	//   - keysAndValues: optional key-value pairs to include with the message
 	Debug(template string, keysAndValues ...interface{})
+
+	// Info logs a message at the Info level.
+	// Parameters:
+	//   - template: the message template to log
+	//   - keysAndValues: optional key-value pairs to include with the message
 	Info(template string, keysAndValues ...interface{})
+
+	// Warn logs a message at the Warn level.
+	// Parameters:
+	//   - template: the message template to log
+	//   - keysAndValues: optional key-value pairs to include with the message
 	Warn(template string, keysAndValues ...interface{})
+
+	// Error logs a message at the Error level.
+	// Parameters:
+	//   - template: the message template to log
+	//   - keysAndValues: optional key-value pairs to include with the message
 	Error(template string, keysAndValues ...interface{})
 }
 

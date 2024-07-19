@@ -1,3 +1,4 @@
+// Package handlers provides the implementation of request handlers for the server.
 package handlers
 
 import (
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// HandleUpdateJSON handles the update of metrics via JSON data.
 func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
@@ -108,6 +110,7 @@ func (h *Handler) setMetrics(w http.ResponseWriter, r *http.Request, data *commo
 	return resData
 }
 
+// HandleValueJSON handles the retrieval of a single metric value via JSON request.
 func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
@@ -191,6 +194,7 @@ func (h *Handler) getMetrics(ctx context.Context, data common.Metrics, w http.Re
 	return resData
 }
 
+// HandleUpdateJSONBatch handles the batch update of metrics via JSON data.
 func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {

@@ -1,3 +1,4 @@
+// Package handlers provides the implementation of request handlers for the server.
 package handlers
 
 import (
@@ -6,19 +7,22 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
+// Handler represents a structure to manage the storage and handler settings.
 type Handler struct {
 	store    storage.Storage
 	settings HandlerSettings
 	log      *slog.Logger
 }
 
+// HandlerSettings contains settings for the handler.
 type HandlerSettings struct {
-	StoreToFileSync bool
-	FilePath        string
-	DatabaseDSN     string
-	HashKey         string
+	StoreToFileSync bool   // Indicates whether to synchronize data to a file.
+	FilePath        string // Path to the file for saving data.
+	DatabaseDSN     string // Database connection string.
+	HashKey         string // Key for hashing data.
 }
 
+// NewHandler creates a new Handler with the provided storage and settings.
 func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
 	return &Handler{
 		store:    store,
@@ -26,6 +30,7 @@ func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
 	}
 }
 
+// StoreToFile saves the data to a file if StoreToFileSync is enabled.
 func (h *Handler) StoreToFile() {
 	if h.settings.StoreToFileSync {
 		if memStore, ok := h.store.(*storage.MemStorage); ok {
