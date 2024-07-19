@@ -1,20 +1,25 @@
+// Package common provides common structures and functions for working with metrics.
 package common
 
+// CounterItem represents a counter metric with a name and value.
 type CounterItem struct {
 	Name  string
 	Value int64
 }
 
+// GaugeItem represents a gauge metric with a name and value.
 type GaugeItem struct {
 	Name  string
 	Value float64
 }
 
+// MetricItems holds slices of counter and gauge items.
 type MetricItems struct {
 	Counters []CounterItem
 	Gauges   []GaugeItem
 }
 
+// ToMetricItems converts a MetricsSlice to a MetricItems structure.
 func (s MetricsSlice) ToMetricItems() MetricItems {
 	res := MetricItems{
 		Counters: make([]CounterItem, 0),
@@ -33,6 +38,7 @@ func (s MetricsSlice) ToMetricItems() MetricItems {
 	return res
 }
 
+// ToMetricsSlice converts a MetricItems structure back to a MetricsSlice.
 func (s MetricItems) ToMetricsSlice() MetricsSlice {
 	res := make([]Metrics, 0)
 

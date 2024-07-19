@@ -1,3 +1,4 @@
+// Package common provides common structures and functions for working with metrics and compression operations.
 package common
 
 import (
@@ -6,6 +7,10 @@ import (
 	"io"
 )
 
+// GZIPCompress compresses the given data using gzip compression.
+// It returns the compressed data as a byte slice or an error if the compression fails.
+// Parameters:
+//   - data: the data to be compressed
 func GZIPCompress(data []byte) ([]byte, error) {
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
@@ -22,6 +27,10 @@ func GZIPCompress(data []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// GZIPDecompress decompresses the given gzip-compressed data.
+// It returns the decompressed data as a byte slice or an error if the decompression fails.
+// Parameters:
+//   - compressedData: the data to be decompressed
 func GZIPDecompress(compressedData []byte) ([]byte, error) {
 	b := bytes.NewReader(compressedData)
 	r, err := gzip.NewReader(b)
@@ -38,6 +47,11 @@ func GZIPDecompress(compressedData []byte) ([]byte, error) {
 	return decompressedData, nil
 }
 
+// GZIPdecompressreader decompresses data read from the provided io.Reader using the given gzip.Reader.
+// It returns the decompressed data as a byte slice or an error if the decompression fails.
+// Parameters:
+//   - reader: the io.Reader to read compressed data from
+//   - gz: the gzip.Reader to use for decompression
 func GZIPdecompressreader(reader io.Reader, gz *gzip.Reader) ([]byte, error) {
 	err := gz.Reset(reader)
 	if err != nil {

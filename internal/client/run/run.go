@@ -1,3 +1,4 @@
+// Package run provides the main execution logic for the client, including configuration and metric reporting.
 package run
 
 import (
@@ -17,14 +18,19 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
+// Config holds the configuration settings for the client.
 type Config struct {
-	Address        string `env:"ADDRESS"`
-	ReportInterval int    `env:"REPORT_INTERVAL"`
-	PollInterval   int    `env:"POLL_INTERVAL"`
-	HashKey        string `env:"KEY"`
-	RateLimit      int    `env:"RATE_LIMIT"`
+	Address        string `env:"ADDRESS"`         // Server address
+	ReportInterval int    `env:"REPORT_INTERVAL"` // Interval for reporting metrics
+	PollInterval   int    `env:"POLL_INTERVAL"`   // Interval for polling metrics
+	HashKey        string `env:"KEY"`             // Key for hashing
+	RateLimit      int    `env:"RATE_LIMIT"`      // Rate limit for sending metrics
 }
 
+// Run starts the client with the given configuration.
+// It initializes metric polling, worker pool, and signal handling for graceful shutdown.
+// Parameters:
+//   - cfg: the configuration settings for the client
 func Run(cfg *Config) {
 	pollInterval := cfg.PollInterval
 	var counter int64
