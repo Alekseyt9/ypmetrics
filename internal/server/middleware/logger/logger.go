@@ -1,3 +1,5 @@
+// Package logger provides middleware that logs HTTP requests and responses,
+// including the method, URI, status, response size, and the duration of the request.
 package logger
 
 import (
@@ -7,6 +9,8 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 )
 
+// WithLogging returns a middleware handler that logs details about each HTTP request and its response.
+// It logs the URI, method, duration, status, and response size.
 func WithLogging(h http.Handler, log log.Logger) http.Handler {
 	logFn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

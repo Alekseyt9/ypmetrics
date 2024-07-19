@@ -1,4 +1,3 @@
-// Package main contains the main entry point and flag parsing for the agent.
 package main
 
 import (

@@ -1,4 +1,3 @@
-// Package pool provides pooling mechanisms for resources such as gzip writers.
 package pool
 
 import (

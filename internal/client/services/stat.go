@@ -1,4 +1,3 @@
-// Package services provides various services for the client, including handling statistics.
 package services
 
 import (
