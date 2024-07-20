@@ -1,4 +1,3 @@
-// Package common provides common structures and functions for working with metrics.
 package common
 
 // CounterItem represents a counter metric with a name and value.

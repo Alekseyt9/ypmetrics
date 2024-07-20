@@ -27,6 +27,11 @@ type MetricsData struct {
 	StatGopsutil *Stat
 }
 
+type metricUpdate struct {
+	name  string
+	value float64
+}
+
 // NewMetricsData creates a new MetricsData instance.
 // Returns a pointer to MetricsData.
 func NewMetricsData() *MetricsData {
@@ -55,42 +60,27 @@ func UpdateMetrics(data *MetricsData, counter int64) error {
 	ms := runtime.MemStats{}
 	runtime.ReadMemStats(&ms)
 
+	gauges := getMetricsGaugeData(&ms)
+
 	stat := data.StatRuntime
 	stat.Lock.Lock()
 	defer stat.Lock.Unlock()
 
-	stat.AddOrUpdateGauge("Alloc", float64(ms.Alloc))
-	stat.AddOrUpdateGauge("BuckHashSys", float64(ms.BuckHashSys))
-	stat.AddOrUpdateGauge("Frees", float64(ms.Frees))
-	stat.AddOrUpdateGauge("BuckHashSys", float64(ms.BuckHashSys))
-	stat.AddOrUpdateGauge("GCCPUFraction", float64(ms.GCCPUFraction))
-	stat.AddOrUpdateGauge("GCSys", float64(ms.GCSys))
-	stat.AddOrUpdateGauge("HeapAlloc", float64(ms.HeapAlloc))
-	stat.AddOrUpdateGauge("HeapIdle", float64(ms.HeapIdle))
-	stat.AddOrUpdateGauge("HeapInuse", float64(ms.HeapInuse))
-	stat.AddOrUpdateGauge("HeapObjects", float64(ms.HeapObjects))
-	stat.AddOrUpdateGauge("HeapReleased", float64(ms.HeapReleased))
-	stat.AddOrUpdateGauge("HeapSys", float64(ms.HeapSys))
-	stat.AddOrUpdateGauge("LastGC", float64(ms.LastGC))
-	stat.AddOrUpdateGauge("Lookups", float64(ms.Lookups))
-	stat.AddOrUpdateGauge("MCacheInuse", float64(ms.MCacheInuse))
-	stat.AddOrUpdateGauge("MCacheSys", float64(ms.MCacheSys))
-	stat.AddOrUpdateGauge("MSpanInuse", float64(ms.MSpanInuse))
-	stat.AddOrUpdateGauge("MSpanSys", float64(ms.MSpanSys))
-	stat.AddOrUpdateGauge("Mallocs", float64(ms.Mallocs))
-	stat.AddOrUpdateGauge("NextGC", float64(ms.NextGC))
-	stat.AddOrUpdateGauge("NumForcedGC", float64(ms.NumForcedGC))
-	stat.AddOrUpdateGauge("NumGC", float64(ms.NumGC))
-	stat.AddOrUpdateGauge("OtherSys", float64(ms.OtherSys))
-	stat.AddOrUpdateGauge("PauseTotalNs", float64(ms.PauseTotalNs))
-	stat.AddOrUpdateGauge("StackInuse", float64(ms.StackInuse))
-	stat.AddOrUpdateGauge("StackSys", float64(ms.StackSys))
-	stat.AddOrUpdateGauge("Sys", float64(ms.Sys))
-	stat.AddOrUpdateGauge("TotalAlloc", float64(ms.TotalAlloc))
-	stat.AddOrUpdateGauge("RandomValue", rand.Float64()) //nolint:gosec //rand хватает
+	for _, u := range gauges {
+		stat.AddOrUpdateGauge(u.name, u.value)
+	}
 	stat.AddOrUpdateCounter("PollCount", counter)
 
-	stat = data.StatGopsutil
+	err := addCPUMetrics(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addCPUMetrics(data *MetricsData) error {
+	stat := data.StatGopsutil
 	v, err := mem.VirtualMemory()
 	if err != nil {
 		return err
@@ -106,12 +96,47 @@ func UpdateMetrics(data *MetricsData, counter int64) error {
 
 	stat.AddOrUpdateGauge("TotalMemory", float64(v.Total))
 	stat.AddOrUpdateGauge("FreeMemory", float64(v.Free))
-
 	for i, utilization := range cpuUtilizations {
 		stat.AddOrUpdateGauge("CPUutilization"+strconv.Itoa(i), float64(utilization))
 	}
 
 	return nil
+}
+
+func getMetricsGaugeData(ms *runtime.MemStats) []metricUpdate {
+	items := []metricUpdate{
+		{"Alloc", float64(ms.Alloc)},
+		{"BuckHashSys", float64(ms.BuckHashSys)},
+		{"Frees", float64(ms.Frees)},
+		{"BuckHashSys", float64(ms.BuckHashSys)},
+		{"GCCPUFraction", float64(ms.GCCPUFraction)},
+		{"GCSys", float64(ms.GCSys)},
+		{"HeapAlloc", float64(ms.HeapAlloc)},
+		{"HeapIdle", float64(ms.HeapIdle)},
+		{"HeapInuse", float64(ms.HeapInuse)},
+		{"HeapObjects", float64(ms.HeapObjects)},
+		{"HeapReleased", float64(ms.HeapReleased)},
+		{"HeapSys", float64(ms.HeapSys)},
+		{"LastGC", float64(ms.LastGC)},
+		{"Lookups", float64(ms.Lookups)},
+		{"MCacheInuse", float64(ms.MCacheInuse)},
+		{"MCacheSys", float64(ms.MCacheSys)},
+		{"MSpanInuse", float64(ms.MSpanInuse)},
+		{"MSpanSys", float64(ms.MSpanSys)},
+		{"Mallocs", float64(ms.Mallocs)},
+		{"NextGC", float64(ms.NextGC)},
+		{"NumForcedGC", float64(ms.NumForcedGC)},
+		{"NumGC", float64(ms.NumGC)},
+		{"OtherSys", float64(ms.OtherSys)},
+		{"PauseTotalNs", float64(ms.PauseTotalNs)},
+		{"StackInuse", float64(ms.StackInuse)},
+		{"StackSys", float64(ms.StackSys)},
+		{"Sys", float64(ms.Sys)},
+		{"TotalAlloc", float64(ms.TotalAlloc)},
+		{"RandomValue", rand.Float64()}, //nolint:gosec //rand хватает
+	}
+
+	return items
 }
 
 // SendMetricsBatch sends a batch of metrics to the specified server.

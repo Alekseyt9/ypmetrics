@@ -1,4 +1,3 @@
-// Package common provides common structures and functions for working with metrics and compression operations.
 package common
 
 import (

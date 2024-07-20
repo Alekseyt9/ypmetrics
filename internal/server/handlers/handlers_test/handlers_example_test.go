@@ -16,11 +16,11 @@ import (
 	"github.com/mailru/easyjson"
 )
 
-func ExampleHandler_HandleUpdateJSON() {
+func ExampleMetricsHandler_HandleUpdateJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewHandler(store, handlers.HandlerSettings{})
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
 	router.Post("/update/", h.HandleUpdateJSON)
 
 	ts := httptest.NewServer(router)
@@ -87,11 +87,11 @@ func ExampleHandler_HandleUpdateJSON() {
 	// Status Code: 200
 }
 
-func ExampleHandler_HandleValueJSON() {
+func ExampleMetricsHandler_HandleValueJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewHandler(store, handlers.HandlerSettings{})
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
 	router.Post("/value/", h.HandleValueJSON)
 
 	ts := httptest.NewServer(router)
@@ -158,11 +158,11 @@ func ExampleHandler_HandleValueJSON() {
 	// Status Code: 200
 }
 
-func ExampleHandler_HandleUpdateBatchJSON() {
+func ExampleMetricsHandler_HandleUpdateBatchJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewHandler(store, handlers.HandlerSettings{})
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
 	router.Post("/updates/", h.HandleUpdateBatchJSON)
 
 	ts := httptest.NewServer(router)
@@ -210,11 +210,11 @@ func ExampleHandler_HandleUpdateBatchJSON() {
 	// Status Code: 200
 }
 
-func ExampleHandler_HandleGetAll() {
+func ExampleMetricsHandler_HandleGetAll() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewHandler(store, handlers.HandlerSettings{})
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
 	router.Get("/all", h.HandleGetAll)
 
 	ts := httptest.NewServer(router)

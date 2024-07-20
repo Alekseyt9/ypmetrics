@@ -1,4 +1,3 @@
-// Package handlers provides the implementation of request handlers for the server.
 package handlers
 
 import (
@@ -16,7 +15,7 @@ import (
 )
 
 // HandleUpdateJSON handles the update of metrics via JSON data.
-func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
+func (h *MetricsHandler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
@@ -70,7 +69,7 @@ func (h *Handler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) setMetrics(w http.ResponseWriter, r *http.Request, data *common.Metrics) *common.Metrics {
+func (h *MetricsHandler) setMetrics(w http.ResponseWriter, r *http.Request, data *common.Metrics) *common.Metrics {
 	var resData = &common.Metrics{
 		MType: data.MType,
 		ID:    data.ID,
@@ -111,7 +110,7 @@ func (h *Handler) setMetrics(w http.ResponseWriter, r *http.Request, data *commo
 }
 
 // HandleValueJSON handles the retrieval of a single metric value via JSON request.
-func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
+func (h *MetricsHandler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
@@ -160,7 +159,7 @@ func (h *Handler) HandleValueJSON(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) getMetrics(ctx context.Context, data common.Metrics, w http.ResponseWriter) *common.Metrics {
+func (h *MetricsHandler) getMetrics(ctx context.Context, data common.Metrics, w http.ResponseWriter) *common.Metrics {
 	var resData = &common.Metrics{
 		MType: data.MType,
 		ID:    data.ID,
@@ -195,7 +194,7 @@ func (h *Handler) getMetrics(ctx context.Context, data common.Metrics, w http.Re
 }
 
 // HandleUpdateJSONBatch handles the batch update of metrics via JSON data.
-func (h *Handler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) {
+func (h *MetricsHandler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Request) {
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)

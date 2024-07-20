@@ -1,4 +1,3 @@
-// Package common provides common structures and functions for working with metrics and cryptographic operations.
 package common
 
 import (

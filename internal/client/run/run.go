@@ -32,38 +32,70 @@ type Config struct {
 // Parameters:
 //   - cfg: the configuration settings for the client
 func Run(cfg *Config) {
-	pollInterval := cfg.PollInterval
 	var counter int64
+	data := initMetricsData()
+	startMetricsPolling(data, cfg, &counter)
+	workerPool := initWorkerPool(cfg)
+	runMetricsSender(cfg, workerPool, data, &counter)
+	handleSysSignals(workerPool)
+}
 
-	data := services.NewMetricsData()
-
+// startMetricsPolling begins the polling of metrics at a regular interval.
+// Parameters:
+//   - data: the metrics data to update
+//   - cfg: the configuration settings for the client
+//   - counter: a counter for the number of polling iterations
+func startMetricsPolling(data *services.MetricsData, cfg *Config, counter *int64) {
 	go func() {
 		for {
-			err := services.UpdateMetrics(data, counter)
+			err := services.UpdateMetrics(data, *counter)
 			if err != nil {
 				log.Print(err)
 			}
-			atomic.AddInt64(&counter, 1)
-			time.Sleep(time.Duration(pollInterval) * time.Second)
+			atomic.AddInt64(counter, 1)
+			time.Sleep(time.Duration(cfg.PollInterval) * time.Second)
 		}
 	}()
+}
 
-	workerPool := workerpool.New(cfg.RateLimit)
-	runSend(cfg, workerPool, data, &counter)
+// initMetricsData initializes and returns a new MetricsData instance.
+func initMetricsData() *services.MetricsData {
+	return services.NewMetricsData()
+}
 
+// initWorkerPool initializes and returns a new WorkerPool instance with the given configuration.
+// Parameters:
+//   - cfg: the configuration settings for the client
+func initWorkerPool(cfg *Config) *workerpool.WorkerPool {
+	return workerpool.New(cfg.RateLimit)
+}
+
+// handleSysSignals sets up signal handling for graceful shutdown of the worker pool.
+// Parameters:
+//   - wp: the worker pool to close on receiving a shutdown signal
+func handleSysSignals(wp *workerpool.WorkerPool) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-signals
-		workerPool.Close()
+		wp.Close()
 		os.Exit(0)
 	}()
 
 	select {}
 }
 
-func runSend(cfg *Config, workerPool *workerpool.WorkerPool, data *services.MetricsData, counter *int64) {
+// runMetricsSender starts sending metrics batches at a regular interval using a worker pool.
+// Parameters:
+//   - cfg: the configuration settings for the client
+//   - workerPool: the worker pool to manage metric sending tasks
+//   - data: the metrics data to send
+//   - counter: a counter for the number of sending iterations
+func runMetricsSender(cfg *Config,
+	workerPool *workerpool.WorkerPool,
+	data *services.MetricsData,
+	counter *int64) {
 	client := resty.New()
 	reportInterval := cfg.ReportInterval
 

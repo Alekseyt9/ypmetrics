@@ -7,8 +7,8 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
-// Handler represents a structure to manage the storage and handler settings.
-type Handler struct {
+// MetricsHandler represents a structure to manage the storage and handler settings.
+type MetricsHandler struct {
 	store    storage.Storage
 	settings HandlerSettings
 	log      *slog.Logger
@@ -22,16 +22,16 @@ type HandlerSettings struct {
 	HashKey         string // Key for hashing data.
 }
 
-// NewHandler creates a new Handler with the provided storage and settings.
-func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
-	return &Handler{
+// NewMetricsHandler creates a new Handler with the provided storage and settings.
+func NewMetricsHandler(store storage.Storage, settings HandlerSettings) *MetricsHandler {
+	return &MetricsHandler{
 		store:    store,
 		settings: settings,
 	}
 }
 
 // StoreToFile saves the data to a file if StoreToFileSync is enabled.
-func (h *Handler) StoreToFile() {
+func (h *MetricsHandler) StoreToFile() {
 	if h.settings.StoreToFileSync {
 		if memStore, ok := h.store.(*storage.MemStorage); ok {
 			err := memStore.SaveToFile(h.settings.FilePath)

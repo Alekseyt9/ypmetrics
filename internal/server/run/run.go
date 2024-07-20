@@ -20,9 +20,9 @@ import (
 )
 
 const (
-	readTimeout  = 1 * time.Minute
-	writeTimeout = 1 * time.Minute
-	idleTimeout  = 1 * time.Minute
+	readTimeout  = time.Minute
+	writeTimeout = time.Minute
+	idleTimeout  = time.Minute
 )
 
 // Config holds the configuration settings for the server.
@@ -43,30 +43,43 @@ type Config struct {
 //
 // Returns a chi.Router with the configured routes and middleware.
 func Router(store storage.Storage, log log.Logger, cfg *Config) chi.Router {
-	hs := handlers.HandlerSettings{
-		DatabaseDSN: cfg.DataBaseDSN,
-		HashKey:     cfg.HashKey,
-	}
-	if cfg.StoreInterval == 0 {
-		hs.StoreToFileSync = true
-		hs.FilePath = cfg.FileStoragePath
-	}
-
-	h := handlers.NewHandler(store, hs)
+	h := initHandler(store, cfg)
 	r := chi.NewRouter()
 
-	r.Use(func(next http.Handler) http.Handler {
-		return logger.WithLogging(next, log)
-	})
-	r.Use(func(next http.Handler) http.Handler {
-		return compress.WithCompress(next, log)
-	})
-	r.Use(func(next http.Handler) http.Handler {
-		return hash.WithHash(next, cfg.HashKey)
-	})
+	setupMiddleware(r, log, cfg)
+	setupUpdateRoutes(r, h)
+	setupValueRoutes(r, h)
+	setupOtherRoutes(r, h)
 
-	r.Mount("/debug", middleware.Profiler())
+	return r
+}
 
+// setupOtherRoutes configures additional routes for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - h: the metrics handler to handle the routes
+func setupOtherRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
+	r.Get("/ping", h.HandlePing)
+	r.Get("/", h.HandleGetAll)
+}
+
+// setupValueRoutes configures value routes for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - h: the metrics handler to handle the routes
+func setupValueRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
+	r.Route("/value", func(r chi.Router) {
+		r.Post("/", h.HandleValueJSON)
+		r.Get("/gauge/{name}", h.HandleGetGauge)
+		r.Get("/counter/{name}", h.HandleGetCounter)
+	})
+}
+
+// setupUpdateRoutes configures update routes for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - h: the metrics handler to handle the routes
+func setupUpdateRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", h.HandleUpdateJSON)
 		r.Post("/*", h.HandleIncorrectType)
@@ -84,17 +97,44 @@ func Router(store storage.Storage, log log.Logger, cfg *Config) chi.Router {
 		})
 	})
 	r.Post("/updates/", h.HandleUpdateBatchJSON)
+}
 
-	r.Route("/value", func(r chi.Router) {
-		r.Post("/", h.HandleValueJSON)
-		r.Get("/gauge/{name}", h.HandleGetGauge)
-		r.Get("/counter/{name}", h.HandleGetCounter)
+// initHandler initializes the metrics handler with the given storage and configuration.
+// Parameters:
+//   - store: the storage to use for handling metrics
+//   - cfg: the configuration settings for the server
+//
+// Returns a MetricsHandler instance.
+func initHandler(store storage.Storage, cfg *Config) *handlers.MetricsHandler {
+	hs := handlers.HandlerSettings{
+		DatabaseDSN: cfg.DataBaseDSN,
+		HashKey:     cfg.HashKey,
+	}
+	if cfg.StoreInterval == 0 {
+		hs.StoreToFileSync = true
+		hs.FilePath = cfg.FileStoragePath
+	}
+
+	return handlers.NewMetricsHandler(store, hs)
+}
+
+// setupMiddleware configures middleware for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - log: the logger instance
+//   - cfg: the configuration settings for the server
+func setupMiddleware(r *chi.Mux, log log.Logger, cfg *Config) {
+	r.Use(func(next http.Handler) http.Handler {
+		return logger.WithLogging(next, log)
+	})
+	r.Use(func(next http.Handler) http.Handler {
+		return compress.WithCompress(next, log)
+	})
+	r.Use(func(next http.Handler) http.Handler {
+		return hash.WithHash(next, cfg.HashKey)
 	})
 
-	r.Get("/ping", h.HandlePing)
-	r.Get("/", h.HandleGetAll)
-
-	return r
+	r.Mount("/debug", middleware.Profiler())
 }
 
 // Run starts the server with the given configuration.
