@@ -3,7 +3,7 @@ package main
 import (
 	goflag "flag"
 
-	"github.com/Alekseyt9/ypmetrics/internal/server/run"
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/caarlos0/env"
 	flag "github.com/spf13/pflag"
 )
@@ -11,7 +11,7 @@ import (
 // ParseFlags parses command-line flags and sets the corresponding fields in the given Config.
 // Parameters:
 //   - cfg: the configuration structure to populate with parsed flag values
-func ParseFlags(cfg *run.Config) {
+func ParseFlags(cfg *config.Config) {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
 
 	address := flag.StringP("address", "a", "localhost:8080", "Address and port to run server")
@@ -37,7 +37,7 @@ func ParseFlags(cfg *run.Config) {
 // SetEnv parses environment variables and sets the corresponding fields in the given Config.
 // Parameters:
 //   - cfg: the configuration structure to populate with parsed environment variable values
-func SetEnv(cfg *run.Config) {
+func SetEnv(cfg *config.Config) {
 	if err := env.Parse(cfg); err != nil {
 		panic(err)
 	}

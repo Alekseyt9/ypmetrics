@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
@@ -113,7 +114,7 @@ func (suite *TestSuite) TestRouterJSON() {
 func BenchmarkJSONPost(b *testing.B) {
 	store := storage.NewMemStorage()
 	logger := log.NewNoOpLogger()
-	cfg := &run.Config{}
+	cfg := &config.Config{}
 	ts := httptest.NewServer(run.Router(store, logger, cfg))
 
 	vg := 1.1

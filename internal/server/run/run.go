@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
@@ -25,16 +26,6 @@ const (
 	idleTimeout  = time.Minute
 )
 
-// Config holds the configuration settings for the server.
-type Config struct {
-	Address         string `env:"ADDRESS"`           // Server address
-	StoreInterval   int    `env:"STORE_INTERVAL"`    // Interval for storing data to file
-	FileStoragePath string `env:"FILE_STORAGE_PATH"` // Path to the file for storing data
-	Restore         bool   `env:"RESTORE"`           // Flag to restore data from file on startup
-	DataBaseDSN     string `env:"DATABASE_DSN"`      // Database connection string
-	HashKey         string `env:"KEY"`               // Key for SHA256 signing
-}
-
 // Router sets up the router with the necessary routes and middleware.
 // Parameters:
 //   - store: the storage to use for handling metrics
@@ -42,7 +33,7 @@ type Config struct {
 //   - cfg: the configuration settings for the server
 //
 // Returns a chi.Router with the configured routes and middleware.
-func Router(store storage.Storage, log log.Logger, cfg *Config) chi.Router {
+func Router(store storage.Storage, log log.Logger, cfg *config.Config) chi.Router {
 	h := initHandler(store, cfg)
 	r := chi.NewRouter()
 
@@ -105,7 +96,7 @@ func setupUpdateRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
 //   - cfg: the configuration settings for the server
 //
 // Returns a MetricsHandler instance.
-func initHandler(store storage.Storage, cfg *Config) *handlers.MetricsHandler {
+func initHandler(store storage.Storage, cfg *config.Config) *handlers.MetricsHandler {
 	hs := handlers.HandlerSettings{
 		DatabaseDSN: cfg.DataBaseDSN,
 		HashKey:     cfg.HashKey,
@@ -123,7 +114,7 @@ func initHandler(store storage.Storage, cfg *Config) *handlers.MetricsHandler {
 //   - r: the chi router to configure
 //   - log: the logger instance
 //   - cfg: the configuration settings for the server
-func setupMiddleware(r *chi.Mux, log log.Logger, cfg *Config) {
+func setupMiddleware(r *chi.Mux, log log.Logger, cfg *config.Config) {
 	r.Use(func(next http.Handler) http.Handler {
 		return logger.WithLogging(next, log)
 	})
@@ -143,7 +134,7 @@ func setupMiddleware(r *chi.Mux, log log.Logger, cfg *Config) {
 //   - cfg: the configuration settings for the server
 //
 // Returns an error if the server fails to start.
-func Run(cfg *Config) error {
+func Run(cfg *config.Config) error {
 	var store storage.Storage
 	logger := log.NewSlogLogger()
 
@@ -171,7 +162,7 @@ func Run(cfg *Config) error {
 	return serverStart(store, cfg, logger)
 }
 
-func serverStart(store storage.Storage, cfg *Config, logger log.Logger) error {
+func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) error {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -201,7 +192,7 @@ func serverStart(store storage.Storage, cfg *Config, logger log.Logger) error {
 	return server.ListenAndServe()
 }
 
-func finalize(store storage.Storage, server *http.Server, cfg *Config, logger log.Logger) {
+func finalize(store storage.Storage, server *http.Server, cfg *config.Config, logger log.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

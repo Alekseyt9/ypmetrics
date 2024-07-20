@@ -4,6 +4,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
@@ -18,7 +19,7 @@ type TestSuite struct {
 func (suite *TestSuite) SetupSuite() {
 	store := storage.NewMemStorage()
 	logger := log.NewSlogLogger()
-	cfg := &run.Config{}
+	cfg := &config.Config{}
 	suite.ts = httptest.NewServer(run.Router(store, logger, cfg))
 }
 

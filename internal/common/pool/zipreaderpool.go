@@ -3,14 +3,15 @@ package pool
 
 import (
 	"compress/gzip"
-	"log/slog"
 	"sync"
+
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 )
 
 // ZipReaderPoolSingleton is a singleton structure that provides a pool of gzip readers.
 type ZipReaderPoolSingleton struct {
 	WriterPool sync.Pool
-	log        *slog.Logger
+	log        log.Logger
 }
 
 var zrinstance *ZipReaderPoolSingleton
@@ -20,7 +21,7 @@ var zronce sync.Once
 // It initializes the instance if it hasn't been initialized yet.
 // Parameters:
 //   - log: the logger to be used by the pool
-func GetZipReaderPool(log *slog.Logger) *ZipReaderPoolSingleton {
+func GetZipReaderPool(log log.Logger) *ZipReaderPoolSingleton {
 	zronce.Do(func() {
 		zrinstance = &ZipReaderPoolSingleton{
 			WriterPool: sync.Pool{

@@ -27,7 +27,7 @@ func TestWorkerPool_AddTask(t *testing.T) {
 func TestWorkerPool_Close(t *testing.T) {
 	var count int32
 	task := func() {
-		time.Sleep(100 * time.Millisecond)
+		<-time.After(100 * time.Millisecond)
 		atomic.AddInt32(&count, 1)
 	}
 

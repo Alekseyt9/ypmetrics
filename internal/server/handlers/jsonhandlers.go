@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"compress/gzip"
 	"errors"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
-	"github.com/Alekseyt9/ypmetrics/internal/common/pool"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/mailru/easyjson"
 	"golang.org/x/net/context"
@@ -21,16 +19,7 @@ func (h *MetricsHandler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
-	var body []byte
-	var err error
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		wps := pool.GetZipReaderPool(h.log)
-		gz := wps.WriterPool.Get().(*gzip.Reader)
-		defer wps.WriterPool.Put(gz)
-		body, err = common.GZIPdecompressreader(r.Body, gz)
-	} else {
-		body, err = io.ReadAll(r.Body)
-	}
+	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
@@ -116,16 +105,7 @@ func (h *MetricsHandler) HandleValueJSON(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
-	var body []byte
-	var err error
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		wps := pool.GetZipReaderPool(h.log)
-		gz := wps.WriterPool.Get().(*gzip.Reader)
-		defer wps.WriterPool.Put(gz)
-		body, err = common.GZIPdecompressreader(r.Body, gz)
-	} else {
-		body, err = io.ReadAll(r.Body)
-	}
+	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
@@ -200,16 +180,7 @@ func (h *MetricsHandler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Re
 		http.Error(w, "incorrect Content-Type", http.StatusUnsupportedMediaType)
 	}
 
-	var body []byte
-	var err error
-	if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-		wps := pool.GetZipReaderPool(h.log)
-		gz := wps.WriterPool.Get().(*gzip.Reader)
-		defer wps.WriterPool.Put(gz)
-		body, err = common.GZIPdecompressreader(r.Body, gz)
-	} else {
-		body, err = io.ReadAll(r.Body)
-	}
+	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)

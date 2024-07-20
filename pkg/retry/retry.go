@@ -51,8 +51,7 @@ func NewController(retries int, delays []time.Duration, needRetry func(error) bo
 //
 // Returns an error if the function ultimately fails after the specified retries.
 func (rc *Controller) Do(f func() error) error {
-	attempt := 0
-	for {
+	for attempt := 0; attempt <= rc.Retries; attempt++ {
 		err := f()
 		if err == nil {
 			return nil
@@ -62,10 +61,11 @@ func (rc *Controller) Do(f func() error) error {
 			return err
 		}
 
-		if attempt >= rc.Retries {
+		if attempt == rc.Retries {
 			return fmt.Errorf("the attempts are over, the last error: %w", err)
 		}
+
 		time.Sleep(rc.Delays[attempt])
-		attempt++
 	}
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
@@ -123,7 +124,7 @@ func (suite *TestSuite) TestHandlePing() {
 func BenchmarkHandleGetAll(b *testing.B) {
 	store := storage.NewMemStorage()
 	logger := log.NewNoOpLogger()
-	cfg := &run.Config{}
+	cfg := &config.Config{}
 	ts := httptest.NewServer(run.Router(store, logger, cfg))
 
 	ctx := context.Background()
@@ -146,7 +147,7 @@ func BenchmarkHandleGetAll(b *testing.B) {
 func BenchmarkHandleGet(b *testing.B) {
 	store := storage.NewMemStorage()
 	logger := log.NewNoOpLogger()
-	cfg := &run.Config{}
+	cfg := &config.Config{}
 	ts := httptest.NewServer(run.Router(store, logger, cfg))
 
 	ctx := context.Background()
