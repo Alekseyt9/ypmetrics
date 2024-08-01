@@ -13,8 +13,8 @@ import (
 // It parses command-line flags and environment variables, then starts the server with the configured settings.
 func main() {
 	cfg := &config.Config{}
-	ParseFlags(cfg)
-	SetEnv(cfg)
+	config.ParseFlags(cfg)
+	config.SetEnv(cfg)
 
 	if err := run.Run(cfg); err != nil {
 		panic(err)

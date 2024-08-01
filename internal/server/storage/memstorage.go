@@ -15,7 +15,7 @@ type MemStorage struct {
 	gaugeLock   sync.RWMutex
 }
 
-func NewMemStorage() Storage {
+func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		counterData: make(map[string]int64),
 		gaugeData:   make(map[string]float64),
