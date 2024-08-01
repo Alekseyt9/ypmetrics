@@ -82,7 +82,7 @@ import (
 	"github.com/gostaticanalysis/sqlrows/passes/sqlrows"
 	"honnef.co/go/tools/staticcheck"
 
-	"github.com/Alekseyt9/ypmetrics/cmd/staticlint/mainexit"
+	"github.com/Alekseyt9/ypmetrics/cmd/staticlint/mainexitanalyzer"
 )
 
 func main() {
@@ -162,7 +162,7 @@ func main() {
 		emptycase.Analyzer)
 
 	// собственный анализатор
-	analyzers = append(analyzers, mainexit.Analyzer)
+	analyzers = append(analyzers, mainexitanalyzer.Analyzer)
 
 	multichecker.Main(analyzers...)
 }
