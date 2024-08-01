@@ -18,7 +18,6 @@ type PGRetryRepositorySuite struct {
 
 func TestPGRetryRepositorySuite(t *testing.T) {
 	cfg := &config.Config{}
-	config.ParseFlags(cfg)
 	config.SetEnv(cfg)
 
 	if cfg.DataBaseDSN == "" {
