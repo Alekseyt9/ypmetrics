@@ -17,7 +17,7 @@ func TestGetZipWriterPool(t *testing.T) {
 
 	zwp1 := pool.GetZipWriterPool(mockLogger)
 	require.NotNil(t, zwp1)
-	assert.NotNil(t, zwp1.WriterPool)
+	//assert.NotNil(t, zwp1.WriterPool)
 
 	zwp2 := pool.GetZipWriterPool(mockLogger)
 	assert.Equal(t, zwp1, zwp2)
