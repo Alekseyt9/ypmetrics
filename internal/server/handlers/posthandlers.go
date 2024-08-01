@@ -7,7 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (h *Handler) HandleGauge(w http.ResponseWriter, r *http.Request) {
+// HandleGauge handles the setting of a gauge metric via URL parameters.
+func (h *MetricsHandler) HandleGauge(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	value := chi.URLParam(r, "value")
 
@@ -25,7 +26,8 @@ func (h *Handler) HandleGauge(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) HandleCounter(w http.ResponseWriter, r *http.Request) {
+// HandleCounter handles the setting of a counter metric via URL parameters.
+func (h *MetricsHandler) HandleCounter(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	value := chi.URLParam(r, "value")
 
@@ -43,10 +45,12 @@ func (h *Handler) HandleCounter(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (h *Handler) HandleIncorrectType(w http.ResponseWriter, _ *http.Request) {
+// HandleIncorrectType handles the error response for an incorrect metric type.
+func (h *MetricsHandler) HandleIncorrectType(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "incorrect metric type", http.StatusBadRequest)
 }
 
-func (h *Handler) HandleNotValue(w http.ResponseWriter, _ *http.Request) {
+// HandleNotValue handles the error response for a missing value.
+func (h *MetricsHandler) HandleNotValue(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "value is missing", http.StatusNotFound)
 }

@@ -1,3 +1,4 @@
+// Package services provides various services for the client, including handling metrics.
 package services
 
 import (
@@ -5,55 +6,148 @@ import (
 	"math/rand"
 	"runtime"
 	"strconv"
+	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/go-resty/resty/v2"
 	"github.com/mailru/easyjson"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
 )
 
-func UpdateMetrics(stat *Stat, counter int64) {
+// SendOptions holds the options for sending metrics.
+type SendOptions struct {
+	BaseURL string
+	HashKey string
+}
+
+// MetricsData holds runtime and gopsutil metrics.
+type MetricsData struct {
+	StatRuntime  *Stat
+	StatGopsutil *Stat
+}
+
+type metricUpdate struct {
+	name  string
+	value float64
+}
+
+// NewMetricsData creates a new MetricsData instance.
+// Returns a pointer to MetricsData.
+func NewMetricsData() *MetricsData {
+	statRuntime := &Stat{
+		Data: &common.MetricItems{
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
+		},
+	}
+	statGopsutil := &Stat{
+		Data: &common.MetricItems{
+			Counters: make([]common.CounterItem, 0),
+			Gauges:   make([]common.GaugeItem, 0),
+		},
+	}
+	return &MetricsData{StatRuntime: statRuntime, StatGopsutil: statGopsutil}
+}
+
+// UpdateMetrics updates the runtime and gopsutil metrics in the given MetricsData instance.
+// Parameters:
+//   - data: the MetricsData instance to update
+//   - counter: the current poll count
+//
+// Returns an error if any of the metric updates fail.
+func UpdateMetrics(data *MetricsData, counter int64) error {
 	ms := runtime.MemStats{}
 	runtime.ReadMemStats(&ms)
+
+	gauges := getMetricsGaugeData(&ms)
+
+	stat := data.StatRuntime
+	stat.Lock.Lock()
+	defer stat.Lock.Unlock()
+
+	for _, u := range gauges {
+		stat.AddOrUpdateGauge(u.name, u.value)
+	}
+	stat.AddOrUpdateCounter("PollCount", counter)
+
+	err := addCPUMetrics(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func addCPUMetrics(data *MetricsData) error {
+	stat := data.StatGopsutil
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		return err
+	}
+
+	cpuUtilizations, err := cpu.Percent(1*time.Second, true)
+	if err != nil {
+		return err
+	}
 
 	stat.Lock.Lock()
 	defer stat.Lock.Unlock()
 
-	stat.Data.Counters = make([]common.CounterItem, 0)
-	stat.Data.Gauges = make([]common.GaugeItem, 0)
+	stat.AddOrUpdateGauge("TotalMemory", float64(v.Total))
+	stat.AddOrUpdateGauge("FreeMemory", float64(v.Free))
+	for i, utilization := range cpuUtilizations {
+		stat.AddOrUpdateGauge("CPUutilization"+strconv.Itoa(i), float64(utilization))
+	}
 
-	stat.AddGauge("Alloc", float64(ms.Alloc))
-	stat.AddGauge("BuckHashSys", float64(ms.BuckHashSys))
-	stat.AddGauge("Frees", float64(ms.Frees))
-	stat.AddGauge("BuckHashSys", float64(ms.BuckHashSys))
-	stat.AddGauge("GCCPUFraction", float64(ms.GCCPUFraction))
-	stat.AddGauge("GCSys", float64(ms.GCSys))
-	stat.AddGauge("HeapAlloc", float64(ms.HeapAlloc))
-	stat.AddGauge("HeapIdle", float64(ms.HeapIdle))
-	stat.AddGauge("HeapInuse", float64(ms.HeapInuse))
-	stat.AddGauge("HeapObjects", float64(ms.HeapObjects))
-	stat.AddGauge("HeapReleased", float64(ms.HeapReleased))
-	stat.AddGauge("HeapSys", float64(ms.HeapSys))
-	stat.AddGauge("LastGC", float64(ms.LastGC))
-	stat.AddGauge("Lookups", float64(ms.Lookups))
-	stat.AddGauge("MCacheInuse", float64(ms.MCacheInuse))
-	stat.AddGauge("MCacheSys", float64(ms.MCacheSys))
-	stat.AddGauge("MSpanInuse", float64(ms.MSpanInuse))
-	stat.AddGauge("MSpanSys", float64(ms.MSpanSys))
-	stat.AddGauge("Mallocs", float64(ms.Mallocs))
-	stat.AddGauge("NextGC", float64(ms.NextGC))
-	stat.AddGauge("NumForcedGC", float64(ms.NumForcedGC))
-	stat.AddGauge("NumGC", float64(ms.NumGC))
-	stat.AddGauge("OtherSys", float64(ms.OtherSys))
-	stat.AddGauge("PauseTotalNs", float64(ms.PauseTotalNs))
-	stat.AddGauge("StackInuse", float64(ms.StackInuse))
-	stat.AddGauge("StackSys", float64(ms.StackSys))
-	stat.AddGauge("Sys", float64(ms.Sys))
-	stat.AddGauge("TotalAlloc", float64(ms.TotalAlloc))
-	stat.AddGauge("RandomValue", rand.Float64()) //nolint:gosec //rand хватает
-	stat.AddCounter("PollCount", counter)
+	return nil
 }
 
-func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
+func getMetricsGaugeData(ms *runtime.MemStats) []metricUpdate {
+	items := []metricUpdate{
+		{"Alloc", float64(ms.Alloc)},
+		{"BuckHashSys", float64(ms.BuckHashSys)},
+		{"Frees", float64(ms.Frees)},
+		{"BuckHashSys", float64(ms.BuckHashSys)},
+		{"GCCPUFraction", float64(ms.GCCPUFraction)},
+		{"GCSys", float64(ms.GCSys)},
+		{"HeapAlloc", float64(ms.HeapAlloc)},
+		{"HeapIdle", float64(ms.HeapIdle)},
+		{"HeapInuse", float64(ms.HeapInuse)},
+		{"HeapObjects", float64(ms.HeapObjects)},
+		{"HeapReleased", float64(ms.HeapReleased)},
+		{"HeapSys", float64(ms.HeapSys)},
+		{"LastGC", float64(ms.LastGC)},
+		{"Lookups", float64(ms.Lookups)},
+		{"MCacheInuse", float64(ms.MCacheInuse)},
+		{"MCacheSys", float64(ms.MCacheSys)},
+		{"MSpanInuse", float64(ms.MSpanInuse)},
+		{"MSpanSys", float64(ms.MSpanSys)},
+		{"Mallocs", float64(ms.Mallocs)},
+		{"NextGC", float64(ms.NextGC)},
+		{"NumForcedGC", float64(ms.NumForcedGC)},
+		{"NumGC", float64(ms.NumGC)},
+		{"OtherSys", float64(ms.OtherSys)},
+		{"PauseTotalNs", float64(ms.PauseTotalNs)},
+		{"StackInuse", float64(ms.StackInuse)},
+		{"StackSys", float64(ms.StackSys)},
+		{"Sys", float64(ms.Sys)},
+		{"TotalAlloc", float64(ms.TotalAlloc)},
+		{"RandomValue", rand.Float64()}, //nolint:gosec //rand хватает
+	}
+
+	return items
+}
+
+// SendMetricsBatch sends a batch of metrics to the specified server.
+// It serializes the metrics data, optionally hashes it, and sends it via HTTP POST request.
+// Parameters:
+//   - client: the Resty client used to send the HTTP request
+//   - stat: the Stat instance containing the metrics data
+//   - opts: the SendOptions containing the base URL and hash key
+//
+// Returns an error if the sending process fails or the server responds with a non-200 status code.
+func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error {
 	if len(stat.Data.Counters) == 0 && len(stat.Data.Gauges) == 0 {
 		return nil
 	}
@@ -69,128 +163,22 @@ func SendMetricsBatch(client *resty.Client, baseURL string, stat *Stat) error {
 		return fmt.Errorf("data compress error: %w", err)
 	}
 
-	_, err = client.R().
+	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Accept-Encoding", "gzip").
-		SetBody(compressedOut).
-		Post("http://" + baseURL + "/updates/")
+		SetHeader("Accept-Encoding", "gzip")
+
+	if opts.HashKey != "" {
+		out := common.HashSHA256(compressedOut, []byte(opts.HashKey))
+		request.SetHeader("HashSHA256", out)
+	}
+
+	_, err = request.SetBody(compressedOut).
+		Post("http://" + opts.BaseURL + "/updates/")
 
 	if err != nil {
 		return fmt.Errorf("error executing request: %w", err)
 	}
 
 	return nil
-}
-
-func SendMetricsJSON(client *resty.Client, baseURL string, stat *Stat) error {
-	statCopy := copyStat(stat)
-
-	for _, item := range statCopy.Gauges {
-		data := common.Metrics{
-			ID:    item.Name,
-			MType: "gauge",
-			Value: &item.Value, //nolint:gosec //version 1.22.2
-		}
-
-		out, err := easyjson.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("JSON marshalling error: %w", err)
-		}
-
-		compressedOut, err := common.GZIPCompress(out)
-		if err != nil {
-			return fmt.Errorf("data compress error: %w", err)
-		}
-
-		_, err = client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetHeader("Accept-Encoding", "gzip").
-			SetBody(compressedOut).
-			Post("http://" + baseURL + "/update")
-
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	for _, item := range statCopy.Counters {
-		data := common.Metrics{
-			ID:    item.Name,
-			MType: "counter",
-			Delta: &item.Value, //nolint:gosec //version 1.22.2
-		}
-		out, err := easyjson.Marshal(data)
-		if err != nil {
-			return fmt.Errorf("JSON marshalling error: %w", err)
-		}
-
-		compressedOut, err := common.GZIPCompress(out)
-		if err != nil {
-			return fmt.Errorf("data compress error: %w", err)
-		}
-
-		_, err = client.R().
-			SetHeader("Content-Type", "application/json").
-			SetHeader("Content-Encoding", "gzip").
-			SetHeader("Accept-Encoding", "gzip").
-			SetBody(compressedOut).
-			Post("http://" + baseURL + "/update")
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func SendMetricsURL(client *resty.Client, baseURL string, stat *Stat) error {
-	statCopy := copyStat(stat)
-
-	for _, item := range statCopy.Gauges {
-		_, err := client.R().
-			SetHeader("Content-Type", "text/plain").
-			SetPathParams(map[string]string{
-				"type":  item.Name,
-				"value": strconv.FormatFloat(item.Value, 'f', -1, 64),
-			}).
-			Post("http://" + baseURL + "/update/gauge/{type}/{value}")
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	for _, item := range statCopy.Counters {
-		_, err := client.R().
-			SetHeader("Content-Type", "text/plain").
-			SetPathParams(map[string]string{
-				"type":  item.Name,
-				"value": strconv.FormatInt(item.Value, 10),
-			}).
-			Post("http://" + baseURL + "/update/counter/{type}/{value}")
-		if err != nil {
-			return fmt.Errorf("error executing request: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func copyStat(stat *Stat) common.MetricItems {
-	dataCopy := common.MetricItems{
-		Counters: make([]common.CounterItem, 0, len(stat.Data.Counters)),
-		Gauges:   make([]common.GaugeItem, 0, len(stat.Data.Counters)),
-	}
-
-	stat.Lock.RLock()
-	defer stat.Lock.RUnlock()
-	for _, item := range stat.Data.Gauges {
-		dataCopy.Gauges = append(dataCopy.Gauges, common.GaugeItem{Name: item.Name, Value: item.Value})
-	}
-	for _, item := range stat.Data.Counters {
-		dataCopy.Counters = append(dataCopy.Counters, common.CounterItem{Name: item.Name, Value: item.Value})
-	}
-
-	return dataCopy
 }

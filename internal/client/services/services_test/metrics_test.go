@@ -4,18 +4,13 @@ import (
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
-	"github.com/Alekseyt9/ypmetrics/internal/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUpdateMetrics(t *testing.T) {
 	var counter int64
-	stat := &services.Stat{
-		Data: &common.MetricItems{
-			Counters: make([]common.CounterItem, 0),
-			Gauges:   make([]common.GaugeItem, 0),
-		},
-	}
+	data := services.NewMetricsData()
 
 	testsGauge := []string{
 		"Alloc", "BuckHashSys", "Frees", "BuckHashSys",
@@ -32,7 +27,9 @@ func TestUpdateMetrics(t *testing.T) {
 		"PollCount",
 	}
 
-	services.UpdateMetrics(stat, counter)
+	err := services.UpdateMetrics(data, counter)
+	require.NoError(t, err)
+	stat := data.StatRuntime
 
 	for _, name := range testsGauge {
 		t.Run(name, func(t *testing.T) {

@@ -1,30 +1,37 @@
+// Package handlers provides the implementation of request handlers for the server.
 package handlers
 
 import (
-	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
+	"log/slog"
+
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
-type Handler struct {
+// MetricsHandler represents a structure to manage the storage and handler settings.
+type MetricsHandler struct {
 	store    storage.Storage
 	settings HandlerSettings
-	log      logger.Logger
+	log      *slog.Logger
 }
 
+// HandlerSettings contains settings for the handler.
 type HandlerSettings struct {
-	StoreToFileSync bool // сохранять сразу после изменения значений
-	FilePath        string
-	DatabaseDSN     string
+	StoreToFileSync bool   // Indicates whether to synchronize data to a file.
+	FilePath        string // Path to the file for saving data.
+	DatabaseDSN     string // Database connection string.
+	HashKey         string // Key for hashing data.
 }
 
-func NewHandler(store storage.Storage, settings HandlerSettings) *Handler {
-	return &Handler{
+// NewMetricsHandler creates a new Handler with the provided storage and settings.
+func NewMetricsHandler(store storage.Storage, settings HandlerSettings) *MetricsHandler {
+	return &MetricsHandler{
 		store:    store,
 		settings: settings,
 	}
 }
 
-func (h *Handler) StoreToFile() {
+// StoreToFile saves the data to a file if StoreToFileSync is enabled.
+func (h *MetricsHandler) StoreToFile() {
 	if h.settings.StoreToFileSync {
 		if memStore, ok := h.store.(*storage.MemStorage); ok {
 			err := memStore.SaveToFile(h.settings.FilePath)

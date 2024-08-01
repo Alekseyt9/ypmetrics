@@ -11,7 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (h *Handler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
+// HandleGetGauge handles the retrieval of a gauge metric by its name.
+func (h *MetricsHandler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	v, err := h.store.GetGauge(r.Context(), name)
@@ -28,7 +29,8 @@ func (h *Handler) HandleGetGauge(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandleGetCounter(w http.ResponseWriter, r *http.Request) {
+// HandleGetCounter handles the retrieval of a counter metric by its name.
+func (h *MetricsHandler) HandleGetCounter(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
 	v, err := h.store.GetCounter(r.Context(), name)
@@ -45,7 +47,8 @@ func (h *Handler) HandleGetCounter(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
+// HandleGetAll handles the retrieval of all metrics and displays them in an HTML list.
+func (h *MetricsHandler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusOK)
 	_, err := w.Write([]byte(`
@@ -95,7 +98,8 @@ func (h *Handler) HandleGetAll(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) HandlePing(w http.ResponseWriter, r *http.Request) {
+// HandlePing handles the ping request to check the database connection.
+func (h *MetricsHandler) HandlePing(w http.ResponseWriter, r *http.Request) {
 	err := h.store.Ping(r.Context())
 	if err != nil {
 		http.Error(w, "database error", http.StatusInternalServerError)

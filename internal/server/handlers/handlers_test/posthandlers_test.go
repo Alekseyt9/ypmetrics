@@ -6,6 +6,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
+	"github.com/Alekseyt9/ypmetrics/internal/server/run"
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/require"
 )
 
@@ -55,4 +59,33 @@ func (suite *TestSuite) TestRouterPost() {
 		statusCode := testReguestPost(suite.T(), suite.ts, v.url)
 		suite.Equal(v.status, statusCode, v.url)
 	}
+}
+
+func BenchmarkHandlePost(b *testing.B) {
+	store := storage.NewMemStorage()
+	logger := log.NewNoOpLogger()
+	cfg := &config.Config{}
+	ts := httptest.NewServer(run.Router(store, logger, cfg))
+
+	b.Run("gauge_update", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			req, err := http.NewRequest(http.MethodPost, ts.URL+"/update/gauge/g1/1", nil)
+			require.NoError(b, err)
+			req.Header.Set("Content-Type", "text/plain")
+			resp, err := ts.Client().Do(req)
+			require.NoError(b, err)
+			defer resp.Body.Close()
+		}
+	})
+
+	b.Run("counter_update", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			req, err := http.NewRequest(http.MethodPost, ts.URL+"/update/counter/c1/1", nil)
+			require.NoError(b, err)
+			req.Header.Set("Content-Type", "text/plain")
+			resp, err := ts.Client().Do(req)
+			require.NoError(b, err)
+			defer resp.Body.Close()
+		}
+	})
 }

@@ -1,3 +1,4 @@
+// Package run provides the main execution logic for the server, including configuration and routing.
 package run
 
 import (
@@ -8,45 +9,68 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Alekseyt9/ypmetrics/internal/server/compress"
-	handlers "github.com/Alekseyt9/ypmetrics/internal/server/handlers"
-	"github.com/Alekseyt9/ypmetrics/internal/server/logger"
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
+	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
-	readTimeout  = 5 * time.Second
-	writeTimeout = 10 * time.Second
-	idleTimeout  = 15 * time.Second
+	readTimeout  = time.Minute
+	writeTimeout = time.Minute
+	idleTimeout  = time.Minute
 )
 
-type Config struct {
-	Address         string `env:"ADDRESS"`
-	StoreInterval   int    `env:"STORE_INTERVAL"`
-	FileStoragePath string `env:"FILE_STORAGE_PATH"`
-	Restore         bool   `env:"RESTORE"`
-	DataBaseDSN     string `env:"DATABASE_DSN"`
-}
-
-func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
-	hs := handlers.HandlerSettings{
-		DatabaseDSN: cfg.DataBaseDSN,
-	}
-	if cfg.StoreInterval == 0 {
-		hs.StoreToFileSync = true
-		hs.FilePath = cfg.FileStoragePath
-	}
-
-	h := handlers.NewHandler(store, hs)
+// Router sets up the router with the necessary routes and middleware.
+// Parameters:
+//   - store: the storage to use for handling metrics
+//   - log: the logger instance
+//   - cfg: the configuration settings for the server
+//
+// Returns a chi.Router with the configured routes and middleware.
+func Router(store storage.Storage, log log.Logger, cfg *config.Config) chi.Router {
+	h := initHandler(store, cfg)
 	r := chi.NewRouter()
 
-	// тк использую библиотеку chi - подключаю middleware стандартным способом
-	r.Use(func(next http.Handler) http.Handler {
-		return logger.WithLogging(next, log)
-	})
-	r.Use(compress.WithCompress)
+	setupMiddleware(r, log, cfg)
+	setupUpdateRoutes(r, h)
+	setupValueRoutes(r, h)
+	setupOtherRoutes(r, h)
 
+	return r
+}
+
+// setupOtherRoutes configures additional routes for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - h: the metrics handler to handle the routes
+func setupOtherRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
+	r.Get("/ping", h.HandlePing)
+	r.Get("/", h.HandleGetAll)
+}
+
+// setupValueRoutes configures value routes for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - h: the metrics handler to handle the routes
+func setupValueRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
+	r.Route("/value", func(r chi.Router) {
+		r.Post("/", h.HandleValueJSON)
+		r.Get("/gauge/{name}", h.HandleGetGauge)
+		r.Get("/counter/{name}", h.HandleGetCounter)
+	})
+}
+
+// setupUpdateRoutes configures update routes for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - h: the metrics handler to handle the routes
+func setupUpdateRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", h.HandleUpdateJSON)
 		r.Post("/*", h.HandleIncorrectType)
@@ -64,22 +88,55 @@ func Router(store storage.Storage, log logger.Logger, cfg *Config) chi.Router {
 		})
 	})
 	r.Post("/updates/", h.HandleUpdateBatchJSON)
-
-	r.Route("/value", func(r chi.Router) {
-		r.Post("/", h.HandleValueJSON)
-		r.Get("/gauge/{name}", h.HandleGetGauge)
-		r.Get("/counter/{name}", h.HandleGetCounter)
-	})
-
-	r.Get("/ping", h.HandlePing)
-	r.Get("/", h.HandleGetAll)
-
-	return r
 }
 
-func Run(cfg *Config) error {
+// initHandler initializes the metrics handler with the given storage and configuration.
+// Parameters:
+//   - store: the storage to use for handling metrics
+//   - cfg: the configuration settings for the server
+//
+// Returns a MetricsHandler instance.
+func initHandler(store storage.Storage, cfg *config.Config) *handlers.MetricsHandler {
+	hs := handlers.HandlerSettings{
+		DatabaseDSN: cfg.DataBaseDSN,
+		HashKey:     cfg.HashKey,
+	}
+	if cfg.StoreInterval == 0 {
+		hs.StoreToFileSync = true
+		hs.FilePath = cfg.FileStoragePath
+	}
+
+	return handlers.NewMetricsHandler(store, hs)
+}
+
+// setupMiddleware configures middleware for the router.
+// Parameters:
+//   - r: the chi router to configure
+//   - log: the logger instance
+//   - cfg: the configuration settings for the server
+func setupMiddleware(r *chi.Mux, log log.Logger, cfg *config.Config) {
+	r.Use(func(next http.Handler) http.Handler {
+		return logger.WithLogging(next, log)
+	})
+	r.Use(func(next http.Handler) http.Handler {
+		return compress.WithCompress(next, log)
+	})
+	r.Use(func(next http.Handler) http.Handler {
+		return hash.WithHash(next, cfg.HashKey)
+	})
+
+	r.Mount("/debug", middleware.Profiler())
+}
+
+// Run starts the server with the given configuration.
+// It initializes the storage, restores data if necessary, and starts the server.
+// Parameters:
+//   - cfg: the configuration settings for the server
+//
+// Returns an error if the server fails to start.
+func Run(cfg *config.Config) error {
 	var store storage.Storage
-	logger := logger.NewSlogLogger()
+	logger := log.NewSlogLogger()
 
 	if cfg.DataBaseDSN != "" {
 		innerStore, err := storage.NewDBStorage(cfg.DataBaseDSN)
@@ -105,7 +162,7 @@ func Run(cfg *Config) error {
 	return serverStart(store, cfg, logger)
 }
 
-func serverStart(store storage.Storage, cfg *Config, logger logger.Logger) error {
+func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) error {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -135,7 +192,7 @@ func serverStart(store storage.Storage, cfg *Config, logger logger.Logger) error
 	return server.ListenAndServe()
 }
 
-func finalize(store storage.Storage, server *http.Server, cfg *Config, logger logger.Logger) {
+func finalize(store storage.Storage, server *http.Server, cfg *config.Config, logger log.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

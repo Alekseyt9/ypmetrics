@@ -8,6 +8,10 @@ import (
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/server/config"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
+	"github.com/Alekseyt9/ypmetrics/internal/server/run"
+	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/mailru/easyjson"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,4 +109,51 @@ func (suite *TestSuite) TestRouterJSON() {
 	for _, v := range tests {
 		testReguestJSON(suite.T(), suite.ts, &v)
 	}
+}
+
+func BenchmarkJSONPost(b *testing.B) {
+	store := storage.NewMemStorage()
+	logger := log.NewNoOpLogger()
+	cfg := &config.Config{}
+	ts := httptest.NewServer(run.Router(store, logger, cfg))
+
+	vg := 1.1
+	dataG := common.Metrics{
+		ID:    "g",
+		MType: "gauge",
+		Value: &vg,
+	}
+	jsonDataG, err := easyjson.Marshal(dataG)
+	require.NoError(b, err)
+
+	var vc int64 = 1
+	dataC := common.Metrics{
+		ID:    "c",
+		MType: "counter",
+		Delta: &vc,
+	}
+	jsonDataC, err := easyjson.Marshal(dataC)
+	require.NoError(b, err)
+
+	b.Run("gauge_json_update", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reqp, err := http.NewRequest(http.MethodPost, ts.URL+"/update/", bytes.NewReader(jsonDataG))
+			require.NoError(b, err)
+			reqp.Header.Set("Content-Type", "application/json")
+			resp, err := ts.Client().Do(reqp)
+			require.NoError(b, err)
+			defer resp.Body.Close()
+		}
+	})
+
+	b.Run("counter_json_update", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reqp, err := http.NewRequest(http.MethodPost, ts.URL+"/update/", bytes.NewReader(jsonDataC))
+			require.NoError(b, err)
+			reqp.Header.Set("Content-Type", "application/json")
+			resp, err := ts.Client().Do(reqp)
+			require.NoError(b, err)
+			defer resp.Body.Close()
+		}
+	})
 }
