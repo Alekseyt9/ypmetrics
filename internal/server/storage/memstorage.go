@@ -10,10 +10,9 @@ import (
 
 type MemStorage struct {
 	counterData map[string]int64
+	gaugeData   map[string]float64
 	counterLock sync.RWMutex
-
-	gaugeData map[string]float64
-	gaugeLock sync.RWMutex
+	gaugeLock   sync.RWMutex
 }
 
 func NewMemStorage() Storage {

@@ -13,9 +13,9 @@ import (
 func TestGaugeStorage(t *testing.T) {
 	tests := []struct {
 		name   string
+		metric string
 		set    float64
 		want   float64
-		metric string
 	}{
 		{
 			name:   "test1",
@@ -61,9 +61,9 @@ func TestGaugeStorage(t *testing.T) {
 func TestCounterStorage(t *testing.T) {
 	tests := []struct {
 		name   string
+		metric string
 		set    int64
 		want   int64
-		metric string
 	}{
 		{
 			name:   "test1",

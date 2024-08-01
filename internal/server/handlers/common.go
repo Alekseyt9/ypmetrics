@@ -9,17 +9,17 @@ import (
 
 // MetricsHandler represents a structure to manage the storage and handler settings.
 type MetricsHandler struct {
+	log      *slog.Logger
 	store    storage.Storage
 	settings HandlerSettings
-	log      *slog.Logger
 }
 
 // HandlerSettings contains settings for the handler.
 type HandlerSettings struct {
-	StoreToFileSync bool   // Indicates whether to synchronize data to a file.
 	FilePath        string // Path to the file for saving data.
 	DatabaseDSN     string // Database connection string.
 	HashKey         string // Key for hashing data.
+	StoreToFileSync bool   // Indicates whether to synchronize data to a file.
 }
 
 // NewMetricsHandler creates a new Handler with the provided storage and settings.
