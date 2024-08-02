@@ -2,6 +2,7 @@
 package main
 
 import (
+	"log"
 	_ "net/http/pprof"
 	"os"
 
@@ -33,6 +34,6 @@ func main() {
 	vInfo.Print(os.Stdout)
 
 	if err := run.Run(cfg); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

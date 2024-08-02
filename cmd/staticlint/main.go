@@ -87,9 +87,47 @@ import (
 
 func main() {
 	var analyzers []*analysis.Analyzer
+	addStaticAnalyzers(&analyzers)
+	addStaticcheckAnalyzers(&analyzers)
+	addPublicAnalyzers(&analyzers)
+	addOwnAnalyzers(&analyzers)
+	multichecker.Main(analyzers...)
+}
 
-	// стандартные статические анализаторы
-	analyzers = append(analyzers,
+// собственный анализатор
+func addOwnAnalyzers(analyzers *[]*analysis.Analyzer) {
+	*analyzers = append(*analyzers, mainexitanalyzer.Analyzer)
+}
+
+// два публичных анализатора
+func addPublicAnalyzers(analyzers *[]*analysis.Analyzer) {
+	*analyzers = append(*analyzers,
+		sqlrows.Analyzer,
+		emptycase.Analyzer)
+}
+
+func addStaticcheckAnalyzers(analyzers *[]*analysis.Analyzer) {
+	// все анализаторы класса SA пакета staticcheck
+	for _, v := range staticcheck.Analyzers {
+		if v.Analyzer.Name[:2] == "SA" {
+			*analyzers = append(*analyzers, v.Analyzer)
+		}
+	}
+
+	// анализаторы остальных классов пакета staticcheck
+	seenClasses := make(map[string]bool, 0)
+	for _, v := range staticcheck.Analyzers {
+		class := v.Analyzer.Name[:2]
+		if class != "SA" && !seenClasses[class] {
+			*analyzers = append(*analyzers, v.Analyzer)
+			seenClasses[class] = true
+		}
+	}
+}
+
+// стандартные статические анализаторы
+func addStaticAnalyzers(analyzers *[]*analysis.Analyzer) {
+	*analyzers = append(*analyzers,
 		appends.Analyzer,
 		asmdecl.Analyzer,
 		assign.Analyzer,
@@ -138,31 +176,4 @@ func main() {
 		unusedwrite.Analyzer,
 		usesgenerics.Analyzer,
 	)
-
-	// все анализаторы класса SA пакета staticcheck
-	for _, v := range staticcheck.Analyzers {
-		if v.Analyzer.Name[:2] == "SA" {
-			analyzers = append(analyzers, v.Analyzer)
-		}
-	}
-
-	// анализаторы остальных классов пакета staticcheck
-	seenClasses := make(map[string]bool, 0)
-	for _, v := range staticcheck.Analyzers {
-		class := v.Analyzer.Name[:2]
-		if class != "SA" && !seenClasses[class] {
-			analyzers = append(analyzers, v.Analyzer)
-			seenClasses[class] = true
-		}
-	}
-
-	// два публичных анализатора
-	analyzers = append(analyzers,
-		sqlrows.Analyzer,
-		emptycase.Analyzer)
-
-	// собственный анализатор
-	analyzers = append(analyzers, mainexitanalyzer.Analyzer)
-
-	multichecker.Main(analyzers...)
 }
