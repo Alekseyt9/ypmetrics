@@ -20,10 +20,10 @@ import (
 
 // Config holds the configuration settings for the client.
 type Config struct {
+	HashKey        string `env:"KEY"`             // Key for hashing
 	Address        string `env:"ADDRESS"`         // Server address
 	ReportInterval int    `env:"REPORT_INTERVAL"` // Interval for reporting metrics
 	PollInterval   int    `env:"POLL_INTERVAL"`   // Interval for polling metrics
-	HashKey        string `env:"KEY"`             // Key for hashing
 	RateLimit      int    `env:"RATE_LIMIT"`      // Rate limit for sending metrics
 }
 

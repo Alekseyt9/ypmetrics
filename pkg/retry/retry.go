@@ -15,9 +15,9 @@ const (
 
 // Controller handles the retry logic for operations.
 type Controller struct {
-	Retries   int
-	Delays    []time.Duration
 	NeedRetry func(error) bool
+	Delays    []time.Duration
+	Retries   int
 }
 
 // NewControllerStd creates a new Controller with standard retry settings.

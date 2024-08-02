@@ -10,13 +10,12 @@ import (
 
 type MemStorage struct {
 	counterData map[string]int64
+	gaugeData   map[string]float64
 	counterLock sync.RWMutex
-
-	gaugeData map[string]float64
-	gaugeLock sync.RWMutex
+	gaugeLock   sync.RWMutex
 }
 
-func NewMemStorage() Storage {
+func NewMemStorage() *MemStorage {
 	return &MemStorage{
 		counterData: make(map[string]int64),
 		gaugeData:   make(map[string]float64),
