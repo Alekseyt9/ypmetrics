@@ -69,7 +69,7 @@ func initWorkerPool(cfg *config.Config) *workerpool.WorkerPool {
 //   - wp: the worker pool to close on receiving a shutdown signal
 func handleSysSignals(wp *workerpool.WorkerPool) {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		<-signals

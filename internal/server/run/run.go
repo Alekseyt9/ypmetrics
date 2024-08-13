@@ -208,7 +208,7 @@ func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) e
 
 func finalize(store storage.Storage, server *http.Server, cfg *config.Config, logger log.Logger) {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		<-sigs
 
