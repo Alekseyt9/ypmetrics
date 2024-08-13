@@ -4,6 +4,7 @@ package main
 import (
 	"os"
 
+	"github.com/Alekseyt9/ypmetrics/internal/client/config"
 	"github.com/Alekseyt9/ypmetrics/internal/client/run"
 	"github.com/Alekseyt9/ypmetrics/internal/common/version"
 )
@@ -18,9 +19,10 @@ var (
 // main is the entry point for the agent application.
 // It parses command-line flags and environment variables, then starts the agent with the configured settings.
 func main() {
-	cfg := &run.Config{}
-	ParseFlags(cfg)
-	SetEnv(cfg)
+	cfg := &config.Config{}
+	config.ParseFlags(cfg)
+	config.SetEnv(cfg)
+	config.MergeConfigFromFile(cfg)
 
 	vInfo := version.Info{
 		Version: buildVersion,

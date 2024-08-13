@@ -27,3 +27,5 @@ vendor/
 /internal/server/storage/test_load_dump.json
 /cmd/keygen/private.key
 /cmd/keygen/public.key
+/cmd/agent/public.key
+/cmd/server/private.key
