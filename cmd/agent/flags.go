@@ -19,6 +19,7 @@ func ParseFlags(cfg *run.Config) {
 	pollInterval := flag.IntP("pollInterval", "p", 2, "frequency of polling metrics from the runtime package")
 	key := flag.StringP("key", "k", "", "key for SHA256 signing")
 	rateLimit := flag.IntP("rateLimit", "l", 5, "upper limit on the number of outgoing requests")
+	ckey := flag.StringP("-crypto-key", "c", "", "key for RSA cypering")
 
 	flag.Parse()
 
@@ -27,6 +28,7 @@ func ParseFlags(cfg *run.Config) {
 	cfg.PollInterval = *pollInterval
 	cfg.HashKey = *key
 	cfg.RateLimit = *rateLimit
+	cfg.CryptoKeyFile = *ckey
 }
 
 // SetEnv parses environment variables and sets the corresponding fields in the given Config.

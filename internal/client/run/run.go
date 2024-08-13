@@ -2,6 +2,7 @@
 package run
 
 import (
+	"crypto/rsa"
 	"errors"
 	"log"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/Alekseyt9/ypmetrics/pkg/workerpool"
 	"github.com/go-resty/resty/v2"
@@ -25,6 +27,7 @@ type Config struct {
 	ReportInterval int    `env:"REPORT_INTERVAL"` // Interval for reporting metrics
 	PollInterval   int    `env:"POLL_INTERVAL"`   // Interval for polling metrics
 	RateLimit      int    `env:"RATE_LIMIT"`      // Rate limit for sending metrics
+	CryptoKeyFile  string `env:"CRYPTO_KEY"`      // Key for RSA cypering
 }
 
 // Run starts the client with the given configuration.
@@ -99,6 +102,15 @@ func runMetricsSender(cfg *Config,
 	client := resty.New()
 	reportInterval := cfg.ReportInterval
 
+	var pKey *rsa.PublicKey
+	var err error
+	if cfg.CryptoKeyFile != "" {
+		pKey, err = crypto.LoadPublicKey(cfg.CryptoKeyFile)
+		if err != nil {
+			log.Print(err)
+		}
+	}
+
 	go func() {
 		retryCtr := retry.NewControllerStd(func(err error) bool {
 			var netErr net.Error
@@ -109,9 +121,11 @@ func runMetricsSender(cfg *Config,
 			}
 			return false
 		})
+
 		sendOpts := &services.SendOptions{
-			BaseURL: cfg.Address,
-			HashKey: cfg.HashKey,
+			BaseURL:   cfg.Address,
+			HashKey:   cfg.HashKey,
+			CryptoKey: pKey,
 		}
 
 		for {

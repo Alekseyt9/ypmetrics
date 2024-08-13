@@ -11,6 +11,7 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/mailru/easyjson"
@@ -20,7 +21,8 @@ func ExampleMetricsHandler_HandleUpdateJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Post("/update/", h.HandleUpdateJSON)
 
 	ts := httptest.NewServer(router)
@@ -91,7 +93,8 @@ func ExampleMetricsHandler_HandleValueJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Post("/value/", h.HandleValueJSON)
 
 	ts := httptest.NewServer(router)
@@ -162,7 +165,8 @@ func ExampleMetricsHandler_HandleUpdateBatchJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Post("/updates/", h.HandleUpdateBatchJSON)
 
 	ts := httptest.NewServer(router)
@@ -214,7 +218,8 @@ func ExampleMetricsHandler_HandleGetAll() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Get("/all", h.HandleGetAll)
 
 	ts := httptest.NewServer(router)

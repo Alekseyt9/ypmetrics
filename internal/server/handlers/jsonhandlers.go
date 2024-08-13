@@ -183,6 +183,7 @@ func (h *MetricsHandler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Re
 
 	body, err := io.ReadAll(r.Body)
 	defer r.Body.Close()
+
 	if err != nil {
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}

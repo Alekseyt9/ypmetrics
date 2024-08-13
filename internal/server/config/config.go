@@ -8,4 +8,5 @@ type Config struct {
 	HashKey         string `env:"KEY"`               // Key for SHA256 signing
 	Restore         bool   `env:"RESTORE"`           // Flag to restore data from file on startup
 	StoreInterval   int    `env:"STORE_INTERVAL"`    // Interval for storing data to file
+	CryptoKeyFile   string `env:"CRYPTO_KEY"`        // Key for RSA cypering
 }

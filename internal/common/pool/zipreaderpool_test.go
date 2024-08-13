@@ -34,10 +34,10 @@ func TestZipReaderPoolSingleton(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			reader, ok := zrp.WriterPool.Get().(*gzip.Reader)
+			reader, ok := zrp.ReaderPool.Get().(*gzip.Reader)
 			require.True(t, ok)
 			assert.NotNil(t, reader)
-			zrp.WriterPool.Put(reader)
+			zrp.ReaderPool.Put(reader)
 		}()
 	}
 
