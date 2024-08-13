@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	common "github.com/Alekseyt9/ypmetrics/internal/common/compress"
+	"github.com/Alekseyt9/ypmetrics/internal/common/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/go-resty/resty/v2"
 	"github.com/mailru/easyjson"
 	"github.com/shirou/gopsutil/cpu"
@@ -36,15 +38,15 @@ type metricUpdate struct {
 // Returns a pointer to MetricsData.
 func NewMetricsData() *MetricsData {
 	statRuntime := &Stat{
-		Data: &common.MetricItems{
-			Counters: make([]common.CounterItem, 0),
-			Gauges:   make([]common.GaugeItem, 0),
+		Data: &items.MetricItems{
+			Counters: make([]items.CounterItem, 0),
+			Gauges:   make([]items.GaugeItem, 0),
 		},
 	}
 	statGopsutil := &Stat{
-		Data: &common.MetricItems{
-			Counters: make([]common.CounterItem, 0),
-			Gauges:   make([]common.GaugeItem, 0),
+		Data: &items.MetricItems{
+			Counters: make([]items.CounterItem, 0),
+			Gauges:   make([]items.GaugeItem, 0),
 		},
 	}
 	return &MetricsData{StatRuntime: statRuntime, StatGopsutil: statGopsutil}
@@ -169,7 +171,7 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 		SetHeader("Accept-Encoding", "gzip")
 
 	if opts.HashKey != "" {
-		out := common.HashSHA256(compressedOut, []byte(opts.HashKey))
+		out := hash.HashSHA256(compressedOut, []byte(opts.HashKey))
 		request.SetHeader("HashSHA256", out)
 	}
 

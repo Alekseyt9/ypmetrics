@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/mailru/easyjson"
 	"golang.org/x/net/context"
@@ -25,10 +26,10 @@ func (h *MetricsHandler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
-	hash := r.Header.Get("HashSHA256")
-	if hash != "" {
+	ha := r.Header.Get("HashSHA256")
+	if ha != "" {
 		if h.settings.HashKey != "" {
-			if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+			if ha != hash.HashSHA256(body, []byte(h.settings.HashKey)) {
 				http.Error(w, "hash check error", http.StatusBadRequest)
 			}
 		} else {
@@ -36,7 +37,7 @@ func (h *MetricsHandler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	var data common.Metrics
+	var data items.Metrics
 	err = easyjson.Unmarshal(body, &data)
 	if err != nil {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
@@ -58,8 +59,8 @@ func (h *MetricsHandler) HandleUpdateJSON(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (h *MetricsHandler) setMetrics(w http.ResponseWriter, r *http.Request, data *common.Metrics) *common.Metrics {
-	var resData = &common.Metrics{
+func (h *MetricsHandler) setMetrics(w http.ResponseWriter, r *http.Request, data *items.Metrics) *items.Metrics {
+	var resData = &items.Metrics{
 		MType: data.MType,
 		ID:    data.ID,
 	}
@@ -111,14 +112,14 @@ func (h *MetricsHandler) HandleValueJSON(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
-	hash := r.Header.Get("HashSHA256")
-	if hash != "" && h.settings.HashKey != "" {
-		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+	ha := r.Header.Get("HashSHA256")
+	if ha != "" && h.settings.HashKey != "" {
+		if ha != hash.HashSHA256(body, []byte(h.settings.HashKey)) {
 			http.Error(w, "hash check error", http.StatusBadRequest)
 		}
 	}
 
-	var data common.Metrics
+	var data items.Metrics
 	err = easyjson.Unmarshal(body, &data)
 	if err != nil {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
@@ -139,8 +140,8 @@ func (h *MetricsHandler) HandleValueJSON(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (h *MetricsHandler) getMetrics(ctx context.Context, data common.Metrics, w http.ResponseWriter) *common.Metrics {
-	var resData = &common.Metrics{
+func (h *MetricsHandler) getMetrics(ctx context.Context, data items.Metrics, w http.ResponseWriter) *items.Metrics {
+	var resData = &items.Metrics{
 		MType: data.MType,
 		ID:    data.ID,
 	}
@@ -186,14 +187,14 @@ func (h *MetricsHandler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Re
 		http.Error(w, "error reading body", http.StatusBadRequest)
 	}
 
-	hash := r.Header.Get("HashSHA256")
-	if hash != "" && h.settings.HashKey != "" {
-		if hash != common.HashSHA256(body, []byte(h.settings.HashKey)) {
+	ha := r.Header.Get("HashSHA256")
+	if ha != "" && h.settings.HashKey != "" {
+		if ha != hash.HashSHA256(body, []byte(h.settings.HashKey)) {
 			http.Error(w, "hash check error", http.StatusBadRequest)
 		}
 	}
 
-	var data common.MetricsSlice
+	var data items.MetricsSlice
 	err = easyjson.Unmarshal(body, &data)
 	if err != nil {
 		http.Error(w, "error unmarshaling JSON", http.StatusBadRequest)
@@ -211,9 +212,9 @@ func (h *MetricsHandler) HandleUpdateBatchJSON(w http.ResponseWriter, r *http.Re
 		http.Error(w, "error SetGauges", http.StatusBadRequest)
 	}
 
-	resData := common.MetricItems{
-		Counters: make([]common.CounterItem, 0),
-		Gauges:   make([]common.GaugeItem, 0),
+	resData := items.MetricItems{
+		Counters: make([]items.CounterItem, 0),
+		Gauges:   make([]items.GaugeItem, 0),
 	}
 
 	resData.Counters, err = h.store.GetCounters(r.Context())

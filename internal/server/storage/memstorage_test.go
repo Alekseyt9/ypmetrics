@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/filedump"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -111,7 +111,7 @@ func TestGauges(t *testing.T) {
 	store := storage.NewMemStorage()
 	ctx := context.Background()
 
-	gauges := []common.GaugeItem{
+	gauges := []items.GaugeItem{
 		{Name: "gauge1", Value: 1.1},
 		{Name: "gauge2", Value: 2.2},
 		{Name: "gauge3", Value: 3.3},
@@ -140,7 +140,7 @@ func TestCounters(t *testing.T) {
 	store := storage.NewMemStorage()
 	ctx := context.Background()
 
-	counters := []common.CounterItem{
+	counters := []items.CounterItem{
 		{Name: "counter1", Value: 100},
 		{Name: "counter2", Value: 200},
 		{Name: "counter3", Value: 300},

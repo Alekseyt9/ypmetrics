@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
@@ -27,7 +27,7 @@ type jsonTestStruct struct {
 }
 
 func testReguestJSON(t *testing.T, ts *httptest.Server, test *jsonTestStruct) {
-	data := common.Metrics{
+	data := items.Metrics{
 		ID:    test.ID,
 		MType: test.mType,
 	}
@@ -50,7 +50,7 @@ func testReguestJSON(t *testing.T, ts *httptest.Server, test *jsonTestStruct) {
 	_, err = io.Copy(io.Discard, respp.Body)
 	require.NoError(t, err)
 
-	data1 := common.Metrics{
+	data1 := items.Metrics{
 		ID:    test.ID,
 		MType: test.mType,
 	}
@@ -66,7 +66,7 @@ func testReguestJSON(t *testing.T, ts *httptest.Server, test *jsonTestStruct) {
 	bodyBytes, err := io.ReadAll(respg.Body)
 	require.NoError(t, err)
 
-	var vData common.Metrics
+	var vData items.Metrics
 	err = easyjson.Unmarshal(bodyBytes, &vData)
 	require.NoError(t, err)
 
@@ -118,7 +118,7 @@ func BenchmarkJSONPost(b *testing.B) {
 	ts := httptest.NewServer(run.Router(store, logger, cfg))
 
 	vg := 1.1
-	dataG := common.Metrics{
+	dataG := items.Metrics{
 		ID:    "g",
 		MType: "gauge",
 		Value: &vg,
@@ -127,7 +127,7 @@ func BenchmarkJSONPost(b *testing.B) {
 	require.NoError(b, err)
 
 	var vc int64 = 1
-	dataC := common.Metrics{
+	dataC := items.Metrics{
 		ID:    "c",
 		MType: "counter",
 		Delta: &vc,

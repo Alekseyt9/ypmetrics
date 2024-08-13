@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
@@ -27,7 +27,7 @@ func ExampleMetricsHandler_HandleUpdateJSON() {
 	defer ts.Close()
 
 	vg := 1.1
-	dataG := common.Metrics{
+	dataG := items.Metrics{
 		ID:    "g",
 		MType: "gauge",
 		Value: &vg,
@@ -55,7 +55,7 @@ func ExampleMetricsHandler_HandleUpdateJSON() {
 	fmt.Println("Status Code:", resp.StatusCode)
 
 	var vc int64 = 1
-	dataC := common.Metrics{
+	dataC := items.Metrics{
 		ID:    "c",
 		MType: "counter",
 		Delta: &vc,
@@ -98,7 +98,7 @@ func ExampleMetricsHandler_HandleValueJSON() {
 	defer ts.Close()
 
 	vg := 1.1
-	dataG := common.Metrics{
+	dataG := items.Metrics{
 		ID:    "g",
 		MType: "gauge",
 		Value: &vg,
@@ -126,7 +126,7 @@ func ExampleMetricsHandler_HandleValueJSON() {
 	fmt.Println("Status Code:", resp.StatusCode)
 
 	var vc int64 = 1
-	dataC := common.Metrics{
+	dataC := items.Metrics{
 		ID:    "c",
 		MType: "counter",
 		Delta: &vc,
@@ -171,7 +171,7 @@ func ExampleMetricsHandler_HandleUpdateBatchJSON() {
 	vg := 1.1
 	vc := int64(1)
 	data :=
-		common.MetricsSlice{
+		items.MetricsSlice{
 			{
 				ID:    "g",
 				MType: "gauge",

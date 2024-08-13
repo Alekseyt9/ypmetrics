@@ -4,16 +4,16 @@ import (
 	"testing"
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAddOrUpdateGauge(t *testing.T) {
 	stat := &services.Stat{
-		Data: &common.MetricItems{
-			Gauges:   []common.GaugeItem{},
-			Counters: []common.CounterItem{},
+		Data: &items.MetricItems{
+			Gauges:   []items.GaugeItem{},
+			Counters: []items.CounterItem{},
 		},
 	}
 
@@ -28,9 +28,9 @@ func TestAddOrUpdateGauge(t *testing.T) {
 
 func TestAddOrUpdateCounter(t *testing.T) {
 	stat := &services.Stat{
-		Data: &common.MetricItems{
-			Gauges:   []common.GaugeItem{},
-			Counters: []common.CounterItem{},
+		Data: &items.MetricItems{
+			Gauges:   []items.GaugeItem{},
+			Counters: []items.CounterItem{},
 		},
 	}
 
@@ -45,9 +45,9 @@ func TestAddOrUpdateCounter(t *testing.T) {
 
 func TestFindGauge(t *testing.T) {
 	stat := &services.Stat{
-		Data: &common.MetricItems{
-			Gauges:   []common.GaugeItem{{Name: "test_gauge", Value: 123.45}},
-			Counters: []common.CounterItem{},
+		Data: &items.MetricItems{
+			Gauges:   []items.GaugeItem{{Name: "test_gauge", Value: 123.45}},
+			Counters: []items.CounterItem{},
 		},
 	}
 
@@ -61,9 +61,9 @@ func TestFindGauge(t *testing.T) {
 
 func TestFindCounter(t *testing.T) {
 	stat := &services.Stat{
-		Data: &common.MetricItems{
-			Gauges:   []common.GaugeItem{},
-			Counters: []common.CounterItem{{Name: "test_counter", Value: 123}},
+		Data: &items.MetricItems{
+			Gauges:   []items.GaugeItem{},
+			Counters: []items.CounterItem{{Name: "test_counter", Value: 123}},
 		},
 	}
 

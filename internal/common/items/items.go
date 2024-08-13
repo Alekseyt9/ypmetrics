@@ -1,4 +1,4 @@
-package common
+package items
 
 // CounterItem represents a counter metric with a name and value.
 type CounterItem struct {

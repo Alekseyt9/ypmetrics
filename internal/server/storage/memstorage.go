@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/filedump"
 )
 
@@ -44,18 +44,18 @@ func (store *MemStorage) SetCounter(_ context.Context, name string, value int64)
 	return nil
 }
 
-func (store *MemStorage) GetCounters(_ context.Context) ([]common.CounterItem, error) {
+func (store *MemStorage) GetCounters(_ context.Context) ([]items.CounterItem, error) {
 	store.counterLock.RLock()
 	defer store.counterLock.RUnlock()
 
-	result := make([]common.CounterItem, 0, len(store.counterData))
+	result := make([]items.CounterItem, 0, len(store.counterData))
 	for name, value := range store.counterData {
-		result = append(result, common.CounterItem{Name: name, Value: value})
+		result = append(result, items.CounterItem{Name: name, Value: value})
 	}
 	return result, nil
 }
 
-func (store *MemStorage) SetCounters(_ context.Context, items []common.CounterItem) error {
+func (store *MemStorage) SetCounters(_ context.Context, items []items.CounterItem) error {
 	store.counterLock.Lock()
 	defer store.counterLock.Unlock()
 
@@ -85,18 +85,18 @@ func (store *MemStorage) SetGauge(_ context.Context, name string, value float64)
 	return nil
 }
 
-func (store *MemStorage) GetGauges(_ context.Context) ([]common.GaugeItem, error) {
+func (store *MemStorage) GetGauges(_ context.Context) ([]items.GaugeItem, error) {
 	store.gaugeLock.RLock()
 	defer store.gaugeLock.RUnlock()
 
-	result := make([]common.GaugeItem, 0, len(store.gaugeData))
+	result := make([]items.GaugeItem, 0, len(store.gaugeData))
 	for name, value := range store.gaugeData {
-		result = append(result, common.GaugeItem{Name: name, Value: value})
+		result = append(result, items.GaugeItem{Name: name, Value: value})
 	}
 	return result, nil
 }
 
-func (store *MemStorage) SetGauges(_ context.Context, items []common.GaugeItem) error {
+func (store *MemStorage) SetGauges(_ context.Context, items []items.GaugeItem) error {
 	store.gaugeLock.Lock()
 	defer store.gaugeLock.Unlock()
 

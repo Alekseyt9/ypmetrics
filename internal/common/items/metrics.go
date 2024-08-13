@@ -1,5 +1,5 @@
-// Package common provides common structures and functions for working with metrics.
-package common
+// Package items provides common structures and functions for working with metrics.
+package items
 
 // Metrics represents the structure of a metric with its main attributes.
 type Metrics struct {

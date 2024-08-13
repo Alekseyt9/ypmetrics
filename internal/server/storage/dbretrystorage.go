@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -55,8 +55,8 @@ func (store *DBRetryStorage) SetCounter(ctx context.Context, name string, value 
 	return err
 }
 
-func (store *DBRetryStorage) GetCounters(ctx context.Context) ([]common.CounterItem, error) {
-	var res []common.CounterItem
+func (store *DBRetryStorage) GetCounters(ctx context.Context) ([]items.CounterItem, error) {
+	var res []items.CounterItem
 	err := doInRetry(func() error {
 		var err error
 		res, err = store.s.GetCounters(ctx)
@@ -65,7 +65,7 @@ func (store *DBRetryStorage) GetCounters(ctx context.Context) ([]common.CounterI
 	return res, err
 }
 
-func (store *DBRetryStorage) SetCounters(ctx context.Context, items []common.CounterItem) error {
+func (store *DBRetryStorage) SetCounters(ctx context.Context, items []items.CounterItem) error {
 	err := doInRetry(func() error {
 		err := store.s.SetCounters(ctx, items)
 		return err
@@ -91,8 +91,8 @@ func (store *DBRetryStorage) SetGauge(ctx context.Context, name string, value fl
 	return err
 }
 
-func (store *DBRetryStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, error) {
-	var res []common.GaugeItem
+func (store *DBRetryStorage) GetGauges(ctx context.Context) ([]items.GaugeItem, error) {
+	var res []items.GaugeItem
 	err := doInRetry(func() error {
 		var err error
 		res, err = store.s.GetGauges(ctx)
@@ -101,7 +101,7 @@ func (store *DBRetryStorage) GetGauges(ctx context.Context) ([]common.GaugeItem,
 	return res, err
 }
 
-func (store *DBRetryStorage) SetGauges(ctx context.Context, items []common.GaugeItem) error {
+func (store *DBRetryStorage) SetGauges(ctx context.Context, items []items.GaugeItem) error {
 	err := doInRetry(func() error {
 		err := store.s.SetGauges(ctx, items)
 		return err

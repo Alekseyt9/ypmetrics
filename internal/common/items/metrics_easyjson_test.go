@@ -1,34 +1,33 @@
-package common_test
+package items_test
 
 import (
 	"testing"
 
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/Alekseyt9/ypmetrics/internal/common"
 )
 
 func TestMetricsJSONMarshaling(t *testing.T) {
-	metrics := common.Metrics{
+	m := items.Metrics{
 		ID:    "test_id",
 		MType: "gauge",
 		Delta: nil,
 		Value: new(float64),
 	}
-	*metrics.Value = 123.45
+	*m.Value = 123.45
 
-	data, err := metrics.MarshalJSON()
+	data, err := m.MarshalJSON()
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{"id":"test_id","type":"gauge","value":123.45}`, string(data))
 
-	var unmarshaledMetrics common.Metrics
+	var unmarshaledMetrics items.Metrics
 	err = unmarshaledMetrics.UnmarshalJSON(data)
 	assert.NoError(t, err)
-	assert.Equal(t, metrics, unmarshaledMetrics)
+	assert.Equal(t, m, unmarshaledMetrics)
 }
 
 func TestMetricsSliceJSONMarshaling(t *testing.T) {
-	metricsSlice := common.MetricsSlice{
+	metricsSlice := items.MetricsSlice{
 		{
 			ID:    "test_id_1",
 			MType: "gauge",
@@ -49,7 +48,7 @@ func TestMetricsSliceJSONMarshaling(t *testing.T) {
 	assert.NoError(t, err)
 	assert.JSONEq(t, `[{"id":"test_id_1","type":"gauge","value":123.45},{"id":"test_id_2","type":"counter","delta":42}]`, string(data))
 
-	var unmarshaledMetricsSlice common.MetricsSlice
+	var unmarshaledMetricsSlice items.MetricsSlice
 	err = unmarshaledMetricsSlice.UnmarshalJSON(data)
 	assert.NoError(t, err)
 	assert.Equal(t, metricsSlice, unmarshaledMetricsSlice)
