@@ -17,8 +17,12 @@ type compressWriter struct {
 }
 
 type gzipReadCloser struct {
-	*gzip.Reader
+	io.Reader
 	body io.ReadCloser
+}
+
+func (crc *gzipReadCloser) Close() error {
+	return crc.body.Close()
 }
 
 // Write compresses the data before writing it to the underlying ResponseWriter.
@@ -29,38 +33,34 @@ func (w compressWriter) Write(b []byte) (int, error) {
 // WithCompress returns a middleware handler that adds gzip compression to the response if the client supports it.
 func WithCompress(next http.Handler, log log.Logger) http.Handler {
 	compressFn := func(w http.ResponseWriter, r *http.Request) {
+		writer := w
+
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			handlegzip(w, r, next, log)
-			return
+			wps := pool.GetZipWriterPool(log)
+			gz := wps.WriterPool.Get().(*gzip.Writer)
+			defer wps.WriterPool.Put(gz)
+			gz.Reset(w)
+			defer gz.Close()
+			w.Header().Set("Content-Encoding", "gzip")
+			writer = compressWriter{ResponseWriter: w, Writer: gz}
 		}
 
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
-			handleDecompress(w, r, next, log)
-			return
+			wps := pool.GetZipReaderPool(log)
+			gz := wps.ReaderPool.Get().(*gzip.Reader)
+			defer wps.ReaderPool.Put(gz)
+
+			if err := gz.Reset(r.Body); err != nil {
+				log.Error("Failed to reset gzip reader", "error", err)
+				http.Error(w, "Invalid gzip body", http.StatusBadRequest)
+				return
+			}
+
+			r.Body = &gzipReadCloser{Reader: gz, body: r.Body}
 		}
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(writer, r)
 	}
 
 	return http.HandlerFunc(compressFn)
-}
-
-func handlegzip(w http.ResponseWriter, r *http.Request, next http.Handler, log log.Logger) {
-	wps := pool.GetZipWriterPool(log)
-	gz := wps.WriterPool.Get().(*gzip.Writer)
-	defer wps.WriterPool.Put(gz)
-
-	gz.Reset(w)
-	defer gz.Close()
-
-	w.Header().Set("Content-Encoding", "gzip")
-	next.ServeHTTP(compressWriter{ResponseWriter: w, Writer: gz}, r)
-}
-
-func handleDecompress(w http.ResponseWriter, r *http.Request, next http.Handler, log log.Logger) {
-	wps := pool.GetZipReaderPool(log)
-	gz := wps.WriterPool.Get().(*gzip.Reader)
-	defer wps.WriterPool.Put(gz)
-	r.Body = &gzipReadCloser{Reader: gz, body: r.Body}
-	next.ServeHTTP(w, r)
 }

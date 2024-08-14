@@ -2,6 +2,7 @@
 package run
 
 import (
+	"crypto/rsa"
 	"errors"
 	"log"
 	"net"
@@ -12,26 +13,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Alekseyt9/ypmetrics/internal/client/config"
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/Alekseyt9/ypmetrics/pkg/workerpool"
 	"github.com/go-resty/resty/v2"
 )
 
-// Config holds the configuration settings for the client.
-type Config struct {
-	HashKey        string `env:"KEY"`             // Key for hashing
-	Address        string `env:"ADDRESS"`         // Server address
-	ReportInterval int    `env:"REPORT_INTERVAL"` // Interval for reporting metrics
-	PollInterval   int    `env:"POLL_INTERVAL"`   // Interval for polling metrics
-	RateLimit      int    `env:"RATE_LIMIT"`      // Rate limit for sending metrics
-}
-
 // Run starts the client with the given configuration.
 // It initializes metric polling, worker pool, and signal handling for graceful shutdown.
 // Parameters:
 //   - cfg: the configuration settings for the client
-func Run(cfg *Config) {
+func Run(cfg *config.Config) {
 	var counter int64
 	data := initMetricsData()
 	startMetricsPolling(data, cfg, &counter)
@@ -45,7 +39,7 @@ func Run(cfg *Config) {
 //   - data: the metrics data to update
 //   - cfg: the configuration settings for the client
 //   - counter: a counter for the number of polling iterations
-func startMetricsPolling(data *services.MetricsData, cfg *Config, counter *int64) {
+func startMetricsPolling(data *services.MetricsData, cfg *config.Config, counter *int64) {
 	go func() {
 		for {
 			err := services.UpdateMetrics(data, *counter)
@@ -66,7 +60,7 @@ func initMetricsData() *services.MetricsData {
 // initWorkerPool initializes and returns a new WorkerPool instance with the given configuration.
 // Parameters:
 //   - cfg: the configuration settings for the client
-func initWorkerPool(cfg *Config) *workerpool.WorkerPool {
+func initWorkerPool(cfg *config.Config) *workerpool.WorkerPool {
 	return workerpool.New(cfg.RateLimit)
 }
 
@@ -75,7 +69,7 @@ func initWorkerPool(cfg *Config) *workerpool.WorkerPool {
 //   - wp: the worker pool to close on receiving a shutdown signal
 func handleSysSignals(wp *workerpool.WorkerPool) {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	go func() {
 		<-signals
@@ -92,12 +86,21 @@ func handleSysSignals(wp *workerpool.WorkerPool) {
 //   - workerPool: the worker pool to manage metric sending tasks
 //   - data: the metrics data to send
 //   - counter: a counter for the number of sending iterations
-func runMetricsSender(cfg *Config,
+func runMetricsSender(cfg *config.Config,
 	workerPool *workerpool.WorkerPool,
 	data *services.MetricsData,
 	counter *int64) {
 	client := resty.New()
 	reportInterval := cfg.ReportInterval
+
+	var pKey *rsa.PublicKey
+	var err error
+	if cfg.CryptoKeyFile != "" {
+		pKey, err = crypto.LoadPublicKey(cfg.CryptoKeyFile)
+		if err != nil {
+			log.Print(err)
+		}
+	}
 
 	go func() {
 		retryCtr := retry.NewControllerStd(func(err error) bool {
@@ -109,9 +112,11 @@ func runMetricsSender(cfg *Config,
 			}
 			return false
 		})
+
 		sendOpts := &services.SendOptions{
-			BaseURL: cfg.Address,
-			HashKey: cfg.HashKey,
+			BaseURL:   cfg.Address,
+			HashKey:   cfg.HashKey,
+			CryptoKey: pKey,
 		}
 
 		for {

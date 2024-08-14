@@ -9,8 +9,9 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/mailru/easyjson"
@@ -20,14 +21,15 @@ func ExampleMetricsHandler_HandleUpdateJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Post("/update/", h.HandleUpdateJSON)
 
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	vg := 1.1
-	dataG := common.Metrics{
+	dataG := items.Metrics{
 		ID:    "g",
 		MType: "gauge",
 		Value: &vg,
@@ -55,7 +57,7 @@ func ExampleMetricsHandler_HandleUpdateJSON() {
 	fmt.Println("Status Code:", resp.StatusCode)
 
 	var vc int64 = 1
-	dataC := common.Metrics{
+	dataC := items.Metrics{
 		ID:    "c",
 		MType: "counter",
 		Delta: &vc,
@@ -91,14 +93,15 @@ func ExampleMetricsHandler_HandleValueJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Post("/value/", h.HandleValueJSON)
 
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	vg := 1.1
-	dataG := common.Metrics{
+	dataG := items.Metrics{
 		ID:    "g",
 		MType: "gauge",
 		Value: &vg,
@@ -126,7 +129,7 @@ func ExampleMetricsHandler_HandleValueJSON() {
 	fmt.Println("Status Code:", resp.StatusCode)
 
 	var vc int64 = 1
-	dataC := common.Metrics{
+	dataC := items.Metrics{
 		ID:    "c",
 		MType: "counter",
 		Delta: &vc,
@@ -162,7 +165,8 @@ func ExampleMetricsHandler_HandleUpdateBatchJSON() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Post("/updates/", h.HandleUpdateBatchJSON)
 
 	ts := httptest.NewServer(router)
@@ -171,7 +175,7 @@ func ExampleMetricsHandler_HandleUpdateBatchJSON() {
 	vg := 1.1
 	vc := int64(1)
 	data :=
-		common.MetricsSlice{
+		items.MetricsSlice{
 			{
 				ID:    "g",
 				MType: "gauge",
@@ -214,7 +218,8 @@ func ExampleMetricsHandler_HandleGetAll() {
 	store := storage.NewMemStorage()
 
 	router := chi.NewRouter()
-	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{})
+	log := log.NewNoOpLogger()
+	h := handlers.NewMetricsHandler(store, handlers.HandlerSettings{}, log)
 	router.Get("/all", h.HandleGetAll)
 
 	ts := httptest.NewServer(router)

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // needs for init
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -55,8 +55,8 @@ func (store *DBStorage) SetCounter(ctx context.Context, name string, value int64
 	return err
 }
 
-func (store *DBStorage) GetCounters(ctx context.Context) ([]common.CounterItem, error) {
-	var res = []common.CounterItem{}
+func (store *DBStorage) GetCounters(ctx context.Context) ([]items.CounterItem, error) {
+	var res = []items.CounterItem{}
 	var rows *sql.Rows
 	rows, err := store.conn.QueryContext(ctx, "select name, value from counters")
 	if err != nil {
@@ -65,7 +65,7 @@ func (store *DBStorage) GetCounters(ctx context.Context) ([]common.CounterItem, 
 	defer rows.Close()
 
 	for rows.Next() {
-		r := common.CounterItem{}
+		r := items.CounterItem{}
 		if err = rows.Scan(&r.Name, &r.Value); err != nil {
 			return nil, err
 		}
@@ -79,7 +79,7 @@ func (store *DBStorage) GetCounters(ctx context.Context) ([]common.CounterItem, 
 	return res, nil
 }
 
-func (store *DBStorage) SetCounters(ctx context.Context, items []common.CounterItem) error {
+func (store *DBStorage) SetCounters(ctx context.Context, items []items.CounterItem) error {
 	tx, err := store.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -131,8 +131,8 @@ func (store *DBStorage) SetGauge(ctx context.Context, name string, value float64
 	return err
 }
 
-func (store *DBStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, error) {
-	var res = []common.GaugeItem{}
+func (store *DBStorage) GetGauges(ctx context.Context) ([]items.GaugeItem, error) {
+	var res = []items.GaugeItem{}
 	var rows *sql.Rows
 	rows, err := store.conn.QueryContext(ctx, "select name, value from gauges")
 	if err != nil {
@@ -141,7 +141,7 @@ func (store *DBStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, erro
 	defer rows.Close()
 
 	for rows.Next() {
-		r := common.GaugeItem{}
+		r := items.GaugeItem{}
 		if err = rows.Scan(&r.Name, &r.Value); err != nil {
 			return nil, err
 		}
@@ -155,7 +155,7 @@ func (store *DBStorage) GetGauges(ctx context.Context) ([]common.GaugeItem, erro
 	return res, nil
 }
 
-func (store *DBStorage) SetGauges(ctx context.Context, items []common.GaugeItem) error {
+func (store *DBStorage) SetGauges(ctx context.Context, items []items.GaugeItem) error {
 	tx, err := store.conn.BeginTx(ctx, nil)
 	if err != nil {
 		return err

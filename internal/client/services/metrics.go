@@ -2,13 +2,17 @@
 package services
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"math/rand"
 	"runtime"
 	"strconv"
 	"time"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	common "github.com/Alekseyt9/ypmetrics/internal/common/compress"
+	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
+	"github.com/Alekseyt9/ypmetrics/internal/common/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/go-resty/resty/v2"
 	"github.com/mailru/easyjson"
 	"github.com/shirou/gopsutil/cpu"
@@ -17,8 +21,9 @@ import (
 
 // SendOptions holds the options for sending metrics.
 type SendOptions struct {
-	BaseURL string
-	HashKey string
+	BaseURL   string
+	HashKey   string
+	CryptoKey *rsa.PublicKey
 }
 
 // MetricsData holds runtime and gopsutil metrics.
@@ -36,15 +41,15 @@ type metricUpdate struct {
 // Returns a pointer to MetricsData.
 func NewMetricsData() *MetricsData {
 	statRuntime := &Stat{
-		Data: &common.MetricItems{
-			Counters: make([]common.CounterItem, 0),
-			Gauges:   make([]common.GaugeItem, 0),
+		Data: &items.MetricItems{
+			Counters: make([]items.CounterItem, 0),
+			Gauges:   make([]items.GaugeItem, 0),
 		},
 	}
 	statGopsutil := &Stat{
-		Data: &common.MetricItems{
-			Counters: make([]common.CounterItem, 0),
-			Gauges:   make([]common.GaugeItem, 0),
+		Data: &items.MetricItems{
+			Counters: make([]items.CounterItem, 0),
+			Gauges:   make([]items.GaugeItem, 0),
 		},
 	}
 	return &MetricsData{StatRuntime: statRuntime, StatGopsutil: statGopsutil}
@@ -158,7 +163,7 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 		return fmt.Errorf("JSON marshalling error: %w", err)
 	}
 
-	compressedOut, err := common.GZIPCompress(out)
+	out, err = common.GZIPCompress(out)
 	if err != nil {
 		return fmt.Errorf("data compress error: %w", err)
 	}
@@ -168,12 +173,19 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 		SetHeader("Content-Encoding", "gzip").
 		SetHeader("Accept-Encoding", "gzip")
 
+	if opts.CryptoKey != nil {
+		out, err = crypto.Cipher(out, opts.CryptoKey)
+		if err != nil {
+			return fmt.Errorf("data cyper error: %w", err)
+		}
+	}
+
 	if opts.HashKey != "" {
-		out := common.HashSHA256(compressedOut, []byte(opts.HashKey))
+		out := hash.HashSHA256(out, []byte(opts.HashKey))
 		request.SetHeader("HashSHA256", out)
 	}
 
-	_, err = request.SetBody(compressedOut).
+	_, err = request.SetBody(out).
 		Post("http://" + opts.BaseURL + "/updates/")
 
 	if err != nil {

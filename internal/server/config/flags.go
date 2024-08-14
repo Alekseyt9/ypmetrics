@@ -22,7 +22,8 @@ func ParseFlags(cfg *Config) {
 		"load previously saved values from the file when the server starts")
 	database := flag.StringP("database", "d", "", "Database connection string")
 	key := flag.StringP("key", "k", "", "key for SHA256 signing")
-
+	ckey := flag.StringP("-crypto-key", "z", "", "key for RSA cypering")
+	cfgFile := flag.StringP("-config", "c", "", "config file")
 	flag.Parse()
 
 	cfg.Address = *address
@@ -31,6 +32,8 @@ func ParseFlags(cfg *Config) {
 	cfg.Restore = *restore
 	cfg.DataBaseDSN = *database
 	cfg.HashKey = *key
+	cfg.CryptoKeyFile = *ckey
+	cfg.ConfigFile = *cfgFile
 }
 
 // SetEnv parses environment variables and sets the corresponding fields in the given Config.

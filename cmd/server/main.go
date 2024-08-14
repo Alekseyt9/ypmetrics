@@ -25,6 +25,7 @@ func main() {
 	cfg := &config.Config{}
 	config.ParseFlags(cfg)
 	config.SetEnv(cfg)
+	config.MergeConfigFromFile(cfg)
 
 	vInfo := version.Info{
 		Version: buildVersion,

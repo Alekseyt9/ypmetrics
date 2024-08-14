@@ -3,12 +3,12 @@ package services
 import (
 	"sync"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 )
 
 // Stat holds metric data and a read-write mutex for synchronized access.
 type Stat struct {
-	Data *common.MetricItems
+	Data *items.MetricItems
 	Lock sync.RWMutex
 }
 
@@ -22,7 +22,7 @@ func (s *Stat) AddOrUpdateGauge(name string, value float64) {
 		old.Value = value
 		return
 	}
-	s.Data.Gauges = append(s.Data.Gauges, common.GaugeItem{Name: name, Value: value})
+	s.Data.Gauges = append(s.Data.Gauges, items.GaugeItem{Name: name, Value: value})
 }
 
 // AddOrUpdateCounter adds a new counter metric or updates an existing one.
@@ -35,7 +35,7 @@ func (s *Stat) AddOrUpdateCounter(name string, value int64) {
 		old.Value = value
 		return
 	}
-	s.Data.Counters = append(s.Data.Counters, common.CounterItem{Name: name, Value: value})
+	s.Data.Counters = append(s.Data.Counters, items.CounterItem{Name: name, Value: value})
 }
 
 // FindGauge searches for a gauge metric by name.
@@ -44,7 +44,7 @@ func (s *Stat) AddOrUpdateCounter(name string, value int64) {
 //
 // Returns:
 //   - a pointer to the found GaugeItem and a boolean indicating if it was found
-func (s *Stat) FindGauge(name string) (*common.GaugeItem, bool) {
+func (s *Stat) FindGauge(name string) (*items.GaugeItem, bool) {
 	for i := 0; i < len(s.Data.Gauges); i++ {
 		if s.Data.Gauges[i].Name == name {
 			return &s.Data.Gauges[i], true
@@ -59,7 +59,7 @@ func (s *Stat) FindGauge(name string) (*common.GaugeItem, bool) {
 //
 // Returns:
 //   - a pointer to the found CounterItem and a boolean indicating if it was found
-func (s *Stat) FindCounter(name string) (*common.CounterItem, bool) {
+func (s *Stat) FindCounter(name string) (*items.CounterItem, bool) {
 	for i := 0; i < len(s.Data.Counters); i++ {
 		if s.Data.Counters[i].Name == name {
 			return &s.Data.Counters[i], true

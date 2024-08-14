@@ -10,7 +10,7 @@ import (
 
 // ZipReaderPoolSingleton is a singleton structure that provides a pool of gzip readers.
 type ZipReaderPoolSingleton struct {
-	WriterPool sync.Pool
+	ReaderPool sync.Pool
 	log        log.Logger
 }
 
@@ -24,7 +24,7 @@ var zronce sync.Once
 func GetZipReaderPool(log log.Logger) *ZipReaderPoolSingleton {
 	zronce.Do(func() {
 		zrinstance = &ZipReaderPoolSingleton{
-			WriterPool: sync.Pool{
+			ReaderPool: sync.Pool{
 				New: func() interface{} {
 					reader := new(gzip.Reader)
 					return reader

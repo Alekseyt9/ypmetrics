@@ -9,10 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	cr "github.com/Alekseyt9/ypmetrics/internal/common/crypto"
 	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/handlers"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/crypto"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
@@ -34,7 +36,7 @@ const (
 //
 // Returns a chi.Router with the configured routes and middleware.
 func Router(store storage.Storage, log log.Logger, cfg *config.Config) chi.Router {
-	h := initHandler(store, cfg)
+	h := initHandler(store, cfg, log)
 	r := chi.NewRouter()
 
 	setupMiddleware(r, log, cfg)
@@ -96,17 +98,17 @@ func setupUpdateRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
 //   - cfg: the configuration settings for the server
 //
 // Returns a MetricsHandler instance.
-func initHandler(store storage.Storage, cfg *config.Config) *handlers.MetricsHandler {
+func initHandler(store storage.Storage, cfg *config.Config, log log.Logger) *handlers.MetricsHandler {
 	hs := handlers.HandlerSettings{
 		DatabaseDSN: cfg.DataBaseDSN,
 		HashKey:     cfg.HashKey,
 	}
 	if cfg.StoreInterval == 0 {
 		hs.StoreToFileSync = true
-		hs.FilePath = cfg.FileStoragePath
+		hs.SaveFile = cfg.FileStoragePath
 	}
 
-	return handlers.NewMetricsHandler(store, hs)
+	return handlers.NewMetricsHandler(store, hs, log)
 }
 
 // setupMiddleware configures middleware for the router.
@@ -118,11 +120,23 @@ func setupMiddleware(r *chi.Mux, log log.Logger, cfg *config.Config) {
 	r.Use(func(next http.Handler) http.Handler {
 		return logger.WithLogging(next, log)
 	})
-	r.Use(func(next http.Handler) http.Handler {
-		return compress.WithCompress(next, log)
-	})
+
 	r.Use(func(next http.Handler) http.Handler {
 		return hash.WithHash(next, cfg.HashKey)
+	})
+
+	if cfg.CryptoKeyFile != "" {
+		key, err := cr.LoadPrivateKey(cfg.CryptoKeyFile)
+		if err != nil {
+			log.Error("LoadPrivateKey", err)
+		}
+		r.Use(func(next http.Handler) http.Handler {
+			return crypto.WithCrypto(next, log, key)
+		})
+	}
+
+	r.Use(func(next http.Handler) http.Handler {
+		return compress.WithCompress(next, log)
 	})
 
 	r.Mount("/debug", middleware.Profiler())
@@ -194,7 +208,7 @@ func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) e
 
 func finalize(store storage.Storage, server *http.Server, cfg *config.Config, logger log.Logger) {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	go func() {
 		<-sigs
 

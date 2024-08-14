@@ -2,31 +2,31 @@
 package handlers
 
 import (
-	"log/slog"
-
+	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 )
 
 // MetricsHandler represents a structure to manage the storage and handler settings.
 type MetricsHandler struct {
-	log      *slog.Logger
+	log      log.Logger
 	store    storage.Storage
 	settings HandlerSettings
 }
 
 // HandlerSettings contains settings for the handler.
 type HandlerSettings struct {
-	FilePath        string // Path to the file for saving data.
+	SaveFile        string // Path to the file for saving data.
 	DatabaseDSN     string // Database connection string.
 	HashKey         string // Key for hashing data.
 	StoreToFileSync bool   // Indicates whether to synchronize data to a file.
 }
 
 // NewMetricsHandler creates a new Handler with the provided storage and settings.
-func NewMetricsHandler(store storage.Storage, settings HandlerSettings) *MetricsHandler {
+func NewMetricsHandler(store storage.Storage, settings HandlerSettings, log log.Logger) *MetricsHandler {
 	return &MetricsHandler{
 		store:    store,
 		settings: settings,
+		log:      log,
 	}
 }
 
@@ -34,9 +34,9 @@ func NewMetricsHandler(store storage.Storage, settings HandlerSettings) *Metrics
 func (h *MetricsHandler) StoreToFile() {
 	if h.settings.StoreToFileSync {
 		if memStore, ok := h.store.(*storage.MemStorage); ok {
-			err := memStore.SaveToFile(h.settings.FilePath)
+			err := memStore.SaveToFile(h.settings.SaveFile)
 			if err != nil {
-				h.log.Error("Error save to file", "filepath", h.settings.FilePath)
+				h.log.Error("Error save to file", "filepath", h.settings.SaveFile)
 			}
 		}
 	}

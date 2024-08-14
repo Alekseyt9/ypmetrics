@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Alekseyt9/ypmetrics/internal/common"
+	"github.com/Alekseyt9/ypmetrics/internal/common/items"
 	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/stretchr/testify/suite"
@@ -48,7 +48,7 @@ func (s *PGRetryRepositorySuite) TestCounter() {
 	s.Require().NoError(err)
 	s.Equal(value, retrievedValue)
 
-	items := []common.CounterItem{
+	items := []items.CounterItem{
 		{Name: "test_counter1", Value: 20},
 		{Name: "test_counter2", Value: 30},
 	}
@@ -72,7 +72,7 @@ func (s *PGRetryRepositorySuite) TestGauge() {
 	s.Require().NoError(err)
 	s.Equal(value, retrievedValue)
 
-	items := []common.GaugeItem{
+	items := []items.GaugeItem{
 		{Name: "test_gauge1", Value: 2.34},
 		{Name: "test_gauge2", Value: 3.45},
 	}
