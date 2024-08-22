@@ -20,11 +20,11 @@ func TestPGRetryRepositorySuite(t *testing.T) {
 	cfg := &config.Config{}
 	config.SetEnv(cfg)
 
-	if cfg.DataBaseDSN == "" {
+	if cfg.DataBaseDSN == nil {
 		t.Skip("Skipping repository tests. Set DATABASE_DSN to run them.")
 	}
 	suite.Run(t, &PGRepositorySuite{
-		connectionString: cfg.DataBaseDSN,
+		connectionString: *cfg.DataBaseDSN,
 	})
 }
 

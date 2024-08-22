@@ -22,10 +22,10 @@ var (
 // main is the entry point for the server application.
 // It parses command-line flags and environment variables, then starts the server with the configured settings.
 func main() {
-	cfg := &config.Config{}
-	config.ParseFlags(cfg)
-	config.SetEnv(cfg)
-	config.MergeConfigFromFile(cfg)
+	cfg, err := config.Get()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	vInfo := version.Info{
 		Version: buildVersion,

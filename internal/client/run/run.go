@@ -47,7 +47,7 @@ func startMetricsPolling(data *services.MetricsData, cfg *config.Config, counter
 				log.Print(err)
 			}
 			atomic.AddInt64(counter, 1)
-			time.Sleep(time.Duration(cfg.PollInterval) * time.Second)
+			time.Sleep(time.Duration(*cfg.PollInterval) * time.Second)
 		}
 	}()
 }
@@ -61,7 +61,7 @@ func initMetricsData() *services.MetricsData {
 // Parameters:
 //   - cfg: the configuration settings for the client
 func initWorkerPool(cfg *config.Config) *workerpool.WorkerPool {
-	return workerpool.New(cfg.RateLimit)
+	return workerpool.New(*cfg.RateLimit)
 }
 
 // handleSysSignals sets up signal handling for graceful shutdown of the worker pool.
@@ -95,8 +95,8 @@ func runMetricsSender(cfg *config.Config,
 
 	var pKey *rsa.PublicKey
 	var err error
-	if cfg.CryptoKeyFile != "" {
-		pKey, err = crypto.LoadPublicKey(cfg.CryptoKeyFile)
+	if cfg.CryptoKeyFile != nil {
+		pKey, err = crypto.LoadPublicKey(*cfg.CryptoKeyFile)
 		if err != nil {
 			log.Print(err)
 		}
@@ -114,8 +114,8 @@ func runMetricsSender(cfg *config.Config,
 		})
 
 		sendOpts := &services.SendOptions{
-			BaseURL:   cfg.Address,
-			HashKey:   cfg.HashKey,
+			BaseURL:   *cfg.Address,
+			HashKey:   *cfg.HashKey,
 			CryptoKey: pKey,
 		}
 
@@ -141,7 +141,7 @@ func runMetricsSender(cfg *config.Config,
 				atomic.StoreInt64(counter, 0)
 			})
 
-			time.Sleep(time.Duration(reportInterval) * time.Second)
+			time.Sleep(time.Duration(*reportInterval) * time.Second)
 		}
 	}()
 }

@@ -26,14 +26,30 @@ func ParseFlags(cfg *Config) {
 	cfgFile := flag.StringP("-config", "c", "", "config file")
 	flag.Parse()
 
-	cfg.Address = *address
-	cfg.StoreInterval = *storeInterval
-	cfg.FileStoragePath = *fileStoragePath
-	cfg.Restore = *restore
-	cfg.DataBaseDSN = *database
-	cfg.HashKey = *key
-	cfg.CryptoKeyFile = *ckey
-	cfg.ConfigFile = *cfgFile
+	if flag.CommandLine.Changed("address") || cfg.Address == nil {
+		cfg.Address = address
+	}
+	if flag.CommandLine.Changed("store-interval") || cfg.StoreInterval == nil {
+		cfg.StoreInterval = storeInterval
+	}
+	if flag.CommandLine.Changed("file-storage-path") || cfg.FileStoragePath == nil {
+		cfg.FileStoragePath = fileStoragePath
+	}
+	if flag.CommandLine.Changed("restore") || cfg.Restore == nil {
+		cfg.Restore = restore
+	}
+	if flag.CommandLine.Changed("database") {
+		cfg.DataBaseDSN = database
+	}
+	if flag.CommandLine.Changed("key") {
+		cfg.HashKey = key
+	}
+	if flag.CommandLine.Changed("crypto-key") {
+		cfg.CryptoKeyFile = ckey
+	}
+	if flag.CommandLine.Changed("config") {
+		cfg.ConfigFile = cfgFile
+	}
 }
 
 // SetEnv parses environment variables and sets the corresponding fields in the given Config.
