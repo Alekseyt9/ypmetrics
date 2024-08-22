@@ -3,7 +3,7 @@ package config
 import (
 	goflag "flag"
 
-	"github.com/caarlos0/env"
+	"github.com/caarlos0/env/v6"
 	flag "github.com/spf13/pflag"
 )
 
@@ -15,7 +15,7 @@ func SetFromFlags(cfg *Config) {
 	address := flag.StringP("address", "a", "localhost:8080", "Address and port to run server")
 	storeInterval := flag.IntP("store-interval", "i", 300,
 		"time interval in seconds, based on which the current state of the server is displayed on disk")
-	fileStoragePath := flag.StringP("file-storage-path", "f", "/tmp/metrics-db.json",
+	fileStoragePath := flag.StringP("file-storage-path", "f", "metrics-db.json",
 		"full name of the file where the current values are saved")
 	restore := flag.BoolP("restore", "r", true,
 		"load previously saved values from the file when the server starts")

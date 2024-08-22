@@ -99,10 +99,14 @@ func setupUpdateRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
 //
 // Returns a MetricsHandler instance.
 func initHandler(store storage.Storage, cfg *config.Config, log log.Logger) *handlers.MetricsHandler {
-	hs := handlers.HandlerSettings{
-		DatabaseDSN: *cfg.DataBaseDSN,
-		HashKey:     *cfg.HashKey,
+	hs := handlers.HandlerSettings{}
+	if cfg.DataBaseDSN != nil {
+		hs.DatabaseDSN = *cfg.DataBaseDSN
 	}
+	if cfg.HashKey != nil {
+		hs.HashKey = *cfg.HashKey
+	}
+
 	if cfg.StoreInterval == nil {
 		hs.StoreToFileSync = true
 		hs.SaveFile = *cfg.FileStoragePath
