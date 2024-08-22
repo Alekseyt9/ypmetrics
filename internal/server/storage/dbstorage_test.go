@@ -18,7 +18,7 @@ type PGRepositorySuite struct {
 
 func TestPGRepositorySuite(t *testing.T) {
 	cfg := &config.Config{}
-	config.SetEnv(cfg)
+	config.SetFromEnv(cfg)
 
 	if cfg.DataBaseDSN == nil {
 		t.Skip("Skipping repository tests. Set DATABASE_DSN to run them.")

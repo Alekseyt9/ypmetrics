@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"flag"
 	"os"
 )
 
@@ -13,52 +14,45 @@ type Config struct {
 	PollInterval   *int    `env:"POLL_INTERVAL" json:"poll_interval"`     // Interval for polling metrics
 	RateLimit      *int    `env:"RATE_LIMIT"`                             // Rate limit for sending metrics
 	CryptoKeyFile  *string `env:"CRYPTO_KEY" json:"crypto_key"`           // Key for RSA cypering
-	ConfigFile     *string `env:"CONFIG"`
 }
 
 func Get() (*Config, error) {
 	cfg := &Config{}
-	ParseFlags(cfg)
-	SetEnv(cfg)
-	err := MergeConfigFromFile(cfg)
+
+	err := SetFromFile(cfg)
 	if err != nil {
 		return nil, err
 	}
+	SetFromFlags(cfg)
+	SetFromEnv(cfg)
+
 	return cfg, nil
 }
 
-func FromFile(file string) (*Config, error) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	var cfg *Config
-	err = json.Unmarshal(data, cfg)
-	if err != nil {
-		return nil, err
-	}
-	return cfg, nil
-}
-
-func MergeConfigFromFile(cfg *Config) error {
-	if cfg.ConfigFile != nil {
-		c, err := FromFile(*cfg.ConfigFile)
+func SetFromFile(cfg *Config) error {
+	path := getConfigPath()
+	if path != "" {
+		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		if cfg.Address == nil {
-			cfg.Address = c.Address
-		}
-		if cfg.ReportInterval == nil {
-			cfg.ReportInterval = c.ReportInterval
-		}
-		if cfg.PollInterval == nil {
-			cfg.PollInterval = c.PollInterval
-		}
-		if cfg.CryptoKeyFile == nil {
-			cfg.CryptoKeyFile = c.CryptoKeyFile
+
+		err = json.Unmarshal(data, cfg)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+func getConfigPath() string {
+	configFlag := flag.String("config", "", "Path to the config file")
+	flag.StringVar(configFlag, "c", "", "Path to the config file (shorthand)")
+	flag.Parse()
+
+	configEnv := os.Getenv("CONFIG")
+	if configEnv != "" {
+		configFlag = &configEnv
+	}
+	return *configFlag
 }

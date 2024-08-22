@@ -10,9 +10,8 @@ import (
 // ParseFlags parses command-line flags and sets the corresponding fields in the given Config.
 // Parameters:
 //   - cfg: the configuration structure to populate with parsed flag values
-func ParseFlags(cfg *Config) {
+func SetFromFlags(cfg *Config) {
 	flag.CommandLine.AddGoFlagSet(goflag.CommandLine)
-
 	address := flag.StringP("address", "a", "localhost:8080", "Address and port to run server")
 	storeInterval := flag.IntP("store-interval", "i", 300,
 		"time interval in seconds, based on which the current state of the server is displayed on disk")
@@ -23,7 +22,6 @@ func ParseFlags(cfg *Config) {
 	database := flag.StringP("database", "d", "", "Database connection string")
 	key := flag.StringP("key", "k", "", "key for SHA256 signing")
 	ckey := flag.StringP("-crypto-key", "z", "", "key for RSA cypering")
-	cfgFile := flag.StringP("-config", "c", "", "config file")
 	flag.Parse()
 
 	if flag.CommandLine.Changed("address") || cfg.Address == nil {
@@ -47,15 +45,12 @@ func ParseFlags(cfg *Config) {
 	if flag.CommandLine.Changed("crypto-key") {
 		cfg.CryptoKeyFile = ckey
 	}
-	if flag.CommandLine.Changed("config") {
-		cfg.ConfigFile = cfgFile
-	}
 }
 
 // SetEnv parses environment variables and sets the corresponding fields in the given Config.
 // Parameters:
 //   - cfg: the configuration structure to populate with parsed environment variable values
-func SetEnv(cfg *Config) {
+func SetFromEnv(cfg *Config) {
 	if err := env.Parse(cfg); err != nil {
 		panic(err)
 	}
