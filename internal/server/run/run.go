@@ -16,6 +16,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/crypto"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/ipcheck"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
@@ -124,6 +125,12 @@ func setupMiddleware(r *chi.Mux, log log.Logger, cfg *config.Config) {
 	r.Use(func(next http.Handler) http.Handler {
 		return logger.WithLogging(next, log)
 	})
+
+	if cfg.TrustedSubnet != nil {
+		r.Use(func(next http.Handler) http.Handler {
+			return ipcheck.WithIPCheck(next, *cfg.TrustedSubnet)
+		})
+	}
 
 	if cfg.HashKey != nil {
 		r.Use(func(next http.Handler) http.Handler {

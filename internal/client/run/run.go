@@ -115,8 +115,10 @@ func runMetricsSender(cfg *config.Config,
 
 		sendOpts := &services.SendOptions{
 			BaseURL:   *cfg.Address,
-			HashKey:   *cfg.HashKey,
 			CryptoKey: pKey,
+		}
+		if cfg.HashKey != nil {
+			sendOpts.HashKey = *cfg.HashKey
 		}
 
 		for {
