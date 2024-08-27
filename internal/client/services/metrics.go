@@ -4,6 +4,7 @@ package services
 import (
 	"crypto/rsa"
 	"fmt"
+	"log"
 	"math/rand"
 	"runtime"
 	"strconv"
@@ -168,10 +169,12 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 		return fmt.Errorf("data compress error: %w", err)
 	}
 
+	ip := GetIpGetter().IP
 	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").
-		SetHeader("Accept-Encoding", "gzip")
+		SetHeader("Accept-Encoding", "gzip").
+		SetHeader("X-Real-IP", ip)
 
 	if opts.CryptoKey != nil {
 		out, err = crypto.Cipher(out, opts.CryptoKey)
@@ -185,8 +188,13 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 		request.SetHeader("HashSHA256", out)
 	}
 
-	_, err = request.SetBody(out).
+	var resp *resty.Response
+	resp, err = request.SetBody(out).
 		Post("http://" + opts.BaseURL + "/updates/")
+
+	if resp != nil && resp.RawResponse != nil {
+		log.Println("response status", resp.RawResponse.Status)
+	}
 
 	if err != nil {
 		return fmt.Errorf("error executing request: %w", err)
