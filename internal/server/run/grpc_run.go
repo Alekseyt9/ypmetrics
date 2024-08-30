@@ -5,6 +5,7 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/grpcserver"
+	"github.com/Alekseyt9/ypmetrics/internal/server/grpcserver/interceptor"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"google.golang.org/grpc"
@@ -20,7 +21,13 @@ func grpcServerStart(store storage.Storage, cfg *config.Config, log log.Logger, 
 			return
 		}
 
-		s := grpc.NewServer()
+		s := grpc.NewServer(
+			grpc.ChainUnaryInterceptor(
+				interceptor.LogInterceptor(log),
+				interceptor.CheckIPInterceptor(cfg.TrustedSubnet),
+				interceptor.CheckHashInterceptor(cfg.HashKey),
+			),
+		)
 		pb.RegisterMetricsServiceServer(s, &grpcserver.GrpcMetricsServer{Store: store, Log: log})
 
 		if err := s.Serve(listen); err != nil {

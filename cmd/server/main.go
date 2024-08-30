@@ -10,6 +10,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/config"
 	"github.com/Alekseyt9/ypmetrics/internal/server/run"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 // Global variables for build information.

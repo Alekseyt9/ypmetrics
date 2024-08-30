@@ -16,6 +16,7 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/config"
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/client/services/interceptor"
 	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
 	pb "github.com/Alekseyt9/ypmetrics/internal/common/proto"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
@@ -24,6 +25,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
 	"google.golang.org/grpc/status"
 )
 
@@ -128,7 +130,14 @@ func runMetricsSender(cfg *config.Config,
 func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
 	counter *int64, cfg *config.Config, data *services.MetricsData, reportInterval int) {
 	ctx := context.Background()
-	conn, err := grpc.NewClient(*cfg.GRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(*cfg.GRPCAddress,
+		grpc.WithChainUnaryInterceptor(
+			interceptor.SetHashInterceptor(cfg.HashKey),
+			interceptor.SetIPInterceptor(services.GetIpGetter().IP),
+		),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}

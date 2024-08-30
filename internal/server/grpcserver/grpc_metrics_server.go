@@ -7,6 +7,8 @@ import (
 	pb "github.com/Alekseyt9/ypmetrics/internal/common/proto"
 	"github.com/Alekseyt9/ypmetrics/internal/server/log"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type GrpcMetricsServer struct {
@@ -28,14 +30,14 @@ func (s *GrpcMetricsServer) SendBatch(ctx context.Context, in *pb.SendBatchReque
 		}
 	}
 
-	_, err := s.Store.GetCounters(ctx)
+	err := s.Store.SetCounters(ctx, mdata.Counters)
 	if err != nil {
-		//http.Error(w, "error GetCounters", http.StatusBadRequest)
+		return nil, status.Errorf(codes.Internal, "error SetCounters %v", err)
 	}
 
-	_, err = s.Store.GetGauges(ctx)
+	err = s.Store.SetGauges(ctx, mdata.Gauges)
 	if err != nil {
-		//http.Error(w, "error GetGauges", http.StatusBadRequest)
+		return nil, status.Errorf(codes.Internal, "error SetGauges %v", err)
 	}
 
 	return &response, nil
