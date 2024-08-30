@@ -123,7 +123,7 @@ func runMetricsSender(cfg *config.Config,
 		SendByGRPCCycle(workerPool, sendOpts, counter, cfg, data, *reportInterval)
 	} else {
 		client := resty.New()
-		SendByHttpCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
+		SendByHTTPCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
 	}
 }
 
@@ -133,7 +133,7 @@ func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendO
 	conn, err := grpc.NewClient(*cfg.GRPCAddress,
 		grpc.WithChainUnaryInterceptor(
 			interceptor.SetHashInterceptor(cfg.HashKey),
-			interceptor.SetIPInterceptor(services.GetIpGetter().IP),
+			interceptor.SetIPInterceptor(services.GetIPGetter().IP),
 		),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)),
@@ -190,7 +190,7 @@ func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendO
 	}()
 }
 
-func SendByHttpCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
+func SendByHTTPCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
 	counter *int64, client *resty.Client, data *services.MetricsData, reportInterval int) {
 	go func() {
 		retryCtr := retry.NewControllerStd(func(err error) bool {

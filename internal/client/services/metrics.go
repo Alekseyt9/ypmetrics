@@ -171,7 +171,7 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 		return fmt.Errorf("data compress error: %w", err)
 	}
 
-	ip := GetIpGetter().IP
+	ip := GetIPGetter().IP
 	request := client.R().
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Content-Encoding", "gzip").

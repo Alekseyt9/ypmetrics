@@ -14,7 +14,7 @@ type IPGetter struct {
 var instance *IPGetter
 var once sync.Once
 
-func GetIpGetter() *IPGetter {
+func GetIPGetter() *IPGetter {
 	once.Do(func() {
 		instance = &IPGetter{}
 		instance.IP, instance.Err = getLocalIP()
