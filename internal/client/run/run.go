@@ -117,13 +117,8 @@ func runMetricsSender(cfg *config.Config,
 	}
 
 	if cfg.GRPCAddress != nil {
-		conn, err := grpc.NewClient(*cfg.GRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer conn.Close()
-		client := pb.NewMetricsServiceClient(conn)
-		SendByGRPCCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
+
+		SendByGRPCCycle(workerPool, sendOpts, counter, cfg, data, *reportInterval)
 	} else {
 		client := resty.New()
 		SendByHttpCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
@@ -131,9 +126,16 @@ func runMetricsSender(cfg *config.Config,
 }
 
 func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
-	counter *int64, client pb.MetricsServiceClient, data *services.MetricsData, reportInterval int) {
+	counter *int64, cfg *config.Config, data *services.MetricsData, reportInterval int) {
 	ctx := context.Background()
+	conn, err := grpc.NewClient(*cfg.GRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := pb.NewMetricsServiceClient(conn)
+
 	go func() {
+		defer conn.Close()
 		retryCtr := retry.NewControllerStd(func(err error) bool {
 			st, ok := status.FromError(err)
 			if !ok {
@@ -175,6 +177,7 @@ func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendO
 
 			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}
+
 	}()
 }
 

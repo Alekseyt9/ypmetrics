@@ -186,20 +186,15 @@ func Run(cfg *config.Config) error {
 		}
 	}
 
-	err := serverStart(store, cfg, logger)
-	if err != nil {
-		return err
-	}
+	stop := make(chan error, 2)
+	serverStart(store, cfg, logger, stop)
+	grpcServerStart(store, cfg, logger, stop)
+	err := <-stop
 
-	err = grpcServerStart(store, cfg, logger)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) error {
+func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger, stop chan error) {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
@@ -225,8 +220,13 @@ func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) e
 
 	finalize(store, server, cfg, logger)
 
-	logger.Info("Running server on ", "address", cfg.Address)
-	return server.ListenAndServe()
+	go func() {
+		logger.Info("Running server on ", "address", cfg.Address)
+		err := server.ListenAndServe()
+		if err != nil {
+			stop <- err
+		}
+	}()
 }
 
 func finalize(store storage.Storage, server *http.Server, cfg *config.Config, logger log.Logger) {

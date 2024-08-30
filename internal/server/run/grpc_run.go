@@ -12,18 +12,20 @@ import (
 	pb "github.com/Alekseyt9/ypmetrics/internal/common/proto"
 )
 
-func grpcServerStart(store storage.Storage, cfg *config.Config, log log.Logger) error {
-	listen, err := net.Listen("tcp", *cfg.GRPCAddress)
-	if err != nil {
-		return err
-	}
+func grpcServerStart(store storage.Storage, cfg *config.Config, log log.Logger, stop chan error) {
+	go func() {
+		listen, err := net.Listen("tcp", *cfg.GRPCAddress)
+		if err != nil {
+			stop <- err
+			return
+		}
 
-	s := grpc.NewServer()
-	pb.RegisterMetricsServiceServer(s, &grpcserver.GrpcMetricsServer{Store: store, Log: log})
+		s := grpc.NewServer()
+		pb.RegisterMetricsServiceServer(s, &grpcserver.GrpcMetricsServer{Store: store, Log: log})
 
-	if err := s.Serve(listen); err != nil {
-		return err
-	}
-
-	return nil
+		if err := s.Serve(listen); err != nil {
+			stop <- err
+			return
+		}
+	}()
 }
