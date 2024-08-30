@@ -26,10 +26,7 @@ func SetHashInterceptor(hashKey *string) grpc.UnaryClientInterceptor {
 				return status.Errorf(codes.Internal, "failed to marshal request: %v", err)
 			}
 			out := hash.HashSHA256(data, []byte(*hashKey))
-			md := metadata.Pairs(
-				"hash", out,
-			)
-			ctx = metadata.NewOutgoingContext(ctx, md)
+			ctx = metadata.AppendToOutgoingContext(ctx, "hash", out)
 		}
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}

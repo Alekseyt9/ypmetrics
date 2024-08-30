@@ -16,10 +16,7 @@ func SetIPInterceptor(ip string) grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		opts ...grpc.CallOption,
 	) error {
-		md := metadata.Pairs(
-			"ip", ip,
-		)
-		ctx = metadata.NewOutgoingContext(ctx, md)
+		ctx = metadata.AppendToOutgoingContext(ctx, "ip", ip)
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
 }
