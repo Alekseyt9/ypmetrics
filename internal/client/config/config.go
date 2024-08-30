@@ -24,6 +24,7 @@ type Config struct {
 	PollInterval   *int    `json:"poll_interval"`   // Interval for polling metrics
 	RateLimit      *int    // Rate limit for sending metrics
 	CryptoKeyFile  *string `json:"crypto_key"` // Key for RSA cypering
+	GRPCAddress    *string // GRPC server address
 }
 
 func Get() (*Config, error) {
@@ -41,6 +42,7 @@ func fillConfig(cfg *Config) {
 	rateLimitCmd := flag.IntP("rateLimit", "l", 5, "upper limit on the number of outgoing requests")
 	ckeyCmd := flag.StringP("crypto-key", "z", "", "key for RSA cypering")
 	configCmd := flag.StringP("config", "c", "", "config path")
+	grpcCmd := flag.StringP("grpc", "g", "", "grpc address")
 	flag.Parse()
 
 	if !flag.CommandLine.Changed("key") {
@@ -64,6 +66,9 @@ func fillConfig(cfg *Config) {
 	if !flag.CommandLine.Changed("config") {
 		configCmd = nil
 	}
+	if !flag.CommandLine.Changed("grpc") {
+		grpcCmd = nil
+	}
 
 	hkeyEnv := configh.GetEnvString("KEY")
 	addressEnv := configh.GetEnvString("ADDRESS")
@@ -72,6 +77,7 @@ func fillConfig(cfg *Config) {
 	rateLimitEnv := configh.GetEnvInt("RATE_LIMIT")
 	ckeyEnv := configh.GetEnvString("CRYPTO_KEY")
 	configEnv := configh.GetEnvString("CONFIG")
+	grpcEnv := configh.GetEnvString("GRPC_ADDRESS")
 
 	configPar := configh.CombineParams(nil, configCmd, configEnv)
 	if configPar != nil {
@@ -84,6 +90,7 @@ func fillConfig(cfg *Config) {
 	cfg.PollInterval = configh.CombineParams(&pollIntervalDef, cfg.PollInterval, pollIntervalCmd, pollIntervalEnv)
 	cfg.RateLimit = configh.CombineParams(&rateLimitDef, cfg.RateLimit, rateLimitCmd, rateLimitEnv)
 	cfg.CryptoKeyFile = configh.CombineParams(nil, cfg.CryptoKeyFile, ckeyCmd, ckeyEnv)
+	cfg.GRPCAddress = configh.CombineParams(nil, cfg.GRPCAddress, grpcCmd, grpcEnv)
 }
 
 func setFromFile(cfg *Config, path string) error {

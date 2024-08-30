@@ -2,6 +2,7 @@
 package run
 
 import (
+	"context"
 	"crypto/rsa"
 	"errors"
 	"log"
@@ -16,9 +17,14 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/client/config"
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
 	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
+	pb "github.com/Alekseyt9/ypmetrics/internal/common/proto"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/Alekseyt9/ypmetrics/pkg/workerpool"
 	"github.com/go-resty/resty/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // Run starts the client with the given configuration.
@@ -90,7 +96,7 @@ func runMetricsSender(cfg *config.Config,
 	workerPool *workerpool.WorkerPool,
 	data *services.MetricsData,
 	counter *int64) {
-	client := resty.New()
+
 	reportInterval := cfg.ReportInterval
 
 	var pKey *rsa.PublicKey
@@ -102,6 +108,78 @@ func runMetricsSender(cfg *config.Config,
 		}
 	}
 
+	sendOpts := &services.SendOptions{
+		BaseURL:   *cfg.Address,
+		CryptoKey: pKey,
+	}
+	if cfg.HashKey != nil {
+		sendOpts.HashKey = *cfg.HashKey
+	}
+
+	if cfg.GRPCAddress != nil {
+		conn, err := grpc.NewClient(*cfg.GRPCAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer conn.Close()
+		client := pb.NewMetricsServiceClient(conn)
+		SendByGRPCCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
+	} else {
+		client := resty.New()
+		SendByHttpCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
+	}
+}
+
+func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
+	counter *int64, client pb.MetricsServiceClient, data *services.MetricsData, reportInterval int) {
+	ctx := context.Background()
+	go func() {
+		retryCtr := retry.NewControllerStd(func(err error) bool {
+			st, ok := status.FromError(err)
+			if !ok {
+				return false
+			}
+
+			switch st.Code() {
+			case codes.Unavailable,
+				codes.DeadlineExceeded,
+				codes.ResourceExhausted,
+				codes.Internal,
+				codes.Unknown:
+				return true
+			default:
+				return false
+			}
+		})
+
+		for {
+			workerPool.AddTask(func() {
+				err := retryCtr.Do(func() error {
+					return services.SendMetricsBatchGRPC(ctx, client, data.StatRuntime)
+				})
+				if err != nil {
+					log.Print(err)
+				}
+				atomic.StoreInt64(counter, 0)
+			})
+
+			workerPool.AddTask(func() {
+				err := retryCtr.Do(func() error {
+					return services.SendMetricsBatchGRPC(ctx, client, data.StatGopsutil)
+				})
+				if err != nil {
+					log.Print(err)
+				}
+				atomic.StoreInt64(counter, 0)
+			})
+
+			time.Sleep(time.Duration(reportInterval) * time.Second)
+		}
+	}()
+}
+
+func SendByHttpCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
+	counter *int64, client *resty.Client, data *services.MetricsData, reportInterval int) {
 	go func() {
 		retryCtr := retry.NewControllerStd(func(err error) bool {
 			var netErr net.Error
@@ -113,16 +191,7 @@ func runMetricsSender(cfg *config.Config,
 			return false
 		})
 
-		sendOpts := &services.SendOptions{
-			BaseURL:   *cfg.Address,
-			CryptoKey: pKey,
-		}
-		if cfg.HashKey != nil {
-			sendOpts.HashKey = *cfg.HashKey
-		}
-
 		for {
-			// Отправляем разные наборы метрик
 			workerPool.AddTask(func() {
 				err := retryCtr.Do(func() error {
 					return services.SendMetricsBatch(client, data.StatRuntime, sendOpts)
@@ -143,7 +212,7 @@ func runMetricsSender(cfg *config.Config,
 				atomic.StoreInt64(counter, 0)
 			})
 
-			time.Sleep(time.Duration(*reportInterval) * time.Second)
+			time.Sleep(time.Duration(reportInterval) * time.Second)
 		}
 	}()
 }

@@ -186,7 +186,17 @@ func Run(cfg *config.Config) error {
 		}
 	}
 
-	return serverStart(store, cfg, logger)
+	err := serverStart(store, cfg, logger)
+	if err != nil {
+		return err
+	}
+
+	err = grpcServerStart(store, cfg, logger)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) error {

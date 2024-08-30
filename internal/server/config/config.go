@@ -14,6 +14,7 @@ var (
 	fileStoragePathDef = "metrics-db.json"
 	restoreDef         = true
 	storeIntervalDef   = 300
+	grpcAddressDef     = ":3200"
 )
 
 // Config holds the configuration settings for the server.
@@ -26,6 +27,7 @@ type Config struct {
 	StoreInterval   *int    `json:"store_interval"` // Interval for storing data to file
 	CryptoKeyFile   *string `json:"crypto_key"`     // Key for RSA cypering
 	TrustedSubnet   *string `json:"trusted_subnet"` // Trusted subnet
+	GRPCAddress     *string // GRPC server address
 }
 
 func Get() (*Config, error) {
@@ -48,6 +50,7 @@ func fillConfig(cfg *Config) {
 	ckeyCmd := flag.StringP("crypto-key", "z", "", "key for RSA cypering")
 	configCmd := flag.StringP("config", "c", "", "config path")
 	subnetCmd := flag.StringP("trusted-subnet", "t", "", "trusted subnet")
+	grpcCmd := flag.StringP("grpc", "g", "", "grpc address")
 	flag.Parse()
 
 	if !flag.CommandLine.Changed("address") {
@@ -77,6 +80,9 @@ func fillConfig(cfg *Config) {
 	if !flag.CommandLine.Changed("trusted-subnet") {
 		subnetCmd = nil
 	}
+	if !flag.CommandLine.Changed("grpc") {
+		grpcCmd = nil
+	}
 
 	addressEnv := configh.GetEnvString("ADDRESS")
 	fileStoragePathEnv := configh.GetEnvString("FILE_STORAGE_PATH")
@@ -87,6 +93,7 @@ func fillConfig(cfg *Config) {
 	ckeyEnv := configh.GetEnvString("CRYPTO_KEY")
 	configEnv := configh.GetEnvString("CONFIG")
 	subnetEnv := configh.GetEnvString("TRUSTED_SUBNET")
+	grpcEnv := configh.GetEnvString("GRPC_ADDRESS")
 
 	configPar := configh.CombineParams(nil, configCmd, configEnv)
 	if configPar != nil {
@@ -101,6 +108,7 @@ func fillConfig(cfg *Config) {
 	cfg.StoreInterval = configh.CombineParams(&storeIntervalDef, cfg.StoreInterval, storeIntervalCmd, storeIntervalEnv)
 	cfg.CryptoKeyFile = configh.CombineParams(nil, cfg.CryptoKeyFile, ckeyCmd, ckeyEnv)
 	cfg.TrustedSubnet = configh.CombineParams(nil, cfg.TrustedSubnet, subnetCmd, subnetEnv)
+	cfg.GRPCAddress = configh.CombineParams(&grpcAddressDef, cfg.GRPCAddress, grpcCmd, grpcEnv)
 }
 
 func setFromFile(cfg *Config, path string) error {

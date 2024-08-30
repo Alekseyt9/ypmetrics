@@ -2,6 +2,7 @@
 package services
 
 import (
+	"context"
 	"crypto/rsa"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
 	"github.com/Alekseyt9/ypmetrics/internal/common/hash"
 	"github.com/Alekseyt9/ypmetrics/internal/common/items"
+	pb "github.com/Alekseyt9/ypmetrics/internal/common/proto"
 	"github.com/go-resty/resty/v2"
 	"github.com/mailru/easyjson"
 	"github.com/shirou/gopsutil/cpu"
@@ -199,6 +201,35 @@ func SendMetricsBatch(client *resty.Client, stat *Stat, opts *SendOptions) error
 	if err != nil {
 		return fmt.Errorf("error executing request: %w", err)
 	}
+
+	return nil
+}
+
+func SendMetricsBatchGRPC(ctx context.Context, client pb.MetricsServiceClient, stat *Stat) error {
+	r := &pb.SendBatchRequest{}
+	r.Metrics = make([]*pb.SendBatchRequest_Metric, 0)
+
+	for _, m := range stat.Data.Counters {
+		r.Metrics = append(r.Metrics, &pb.SendBatchRequest_Metric{
+			Id:    m.Name,
+			Delta: m.Value,
+			Type:  pb.SendBatchRequest_COUNTER,
+		})
+	}
+
+	for _, m := range stat.Data.Gauges {
+		r.Metrics = append(r.Metrics, &pb.SendBatchRequest_Metric{
+			Id:    m.Name,
+			Value: m.Value,
+			Type:  pb.SendBatchRequest_GAUGE,
+		})
+	}
+
+	resp, err := client.SendBatch(ctx, r)
+	if err != nil {
+		return err
+	}
+	log.Println("grpc response status", resp.Error)
 
 	return nil
 }
