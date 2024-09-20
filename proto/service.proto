@@ -1,0 +1,27 @@
+syntax="proto3";
+package proto;
+option go_package = "github.com/Alekseyt9/ypmetrics/internal/common/proto;proto";
+
+message SendBatchRequest {
+    enum MType {
+        GAUGE = 0;
+        COUNTER = 1;
+    }
+
+    message Metric {
+        string id = 1;
+        MType type = 2;
+        int64 delta = 3;
+        double value = 4;
+    }
+
+    repeated Metric metrics = 1;
+}
+
+message SendBatchResponse {
+    string error = 1;
+}
+
+service MetricsService {
+    rpc SendBatch(SendBatchRequest) returns (SendBatchResponse);
+}

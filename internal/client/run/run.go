@@ -2,6 +2,7 @@
 package run
 
 import (
+	"context"
 	"crypto/rsa"
 	"errors"
 	"log"
@@ -15,10 +16,17 @@ import (
 
 	"github.com/Alekseyt9/ypmetrics/internal/client/config"
 	"github.com/Alekseyt9/ypmetrics/internal/client/services"
+	"github.com/Alekseyt9/ypmetrics/internal/client/services/interceptor"
 	"github.com/Alekseyt9/ypmetrics/internal/common/crypto"
+	pb "github.com/Alekseyt9/ypmetrics/internal/common/proto"
 	"github.com/Alekseyt9/ypmetrics/pkg/retry"
 	"github.com/Alekseyt9/ypmetrics/pkg/workerpool"
 	"github.com/go-resty/resty/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding/gzip"
+	"google.golang.org/grpc/status"
 )
 
 // Run starts the client with the given configuration.
@@ -47,7 +55,7 @@ func startMetricsPolling(data *services.MetricsData, cfg *config.Config, counter
 				log.Print(err)
 			}
 			atomic.AddInt64(counter, 1)
-			time.Sleep(time.Duration(cfg.PollInterval) * time.Second)
+			time.Sleep(time.Duration(*cfg.PollInterval) * time.Second)
 		}
 	}()
 }
@@ -61,7 +69,7 @@ func initMetricsData() *services.MetricsData {
 // Parameters:
 //   - cfg: the configuration settings for the client
 func initWorkerPool(cfg *config.Config) *workerpool.WorkerPool {
-	return workerpool.New(cfg.RateLimit)
+	return workerpool.New(*cfg.RateLimit)
 }
 
 // handleSysSignals sets up signal handling for graceful shutdown of the worker pool.
@@ -90,18 +98,100 @@ func runMetricsSender(cfg *config.Config,
 	workerPool *workerpool.WorkerPool,
 	data *services.MetricsData,
 	counter *int64) {
-	client := resty.New()
+
 	reportInterval := cfg.ReportInterval
 
 	var pKey *rsa.PublicKey
 	var err error
-	if cfg.CryptoKeyFile != "" {
-		pKey, err = crypto.LoadPublicKey(cfg.CryptoKeyFile)
+	if cfg.CryptoKeyFile != nil {
+		pKey, err = crypto.LoadPublicKey(*cfg.CryptoKeyFile)
 		if err != nil {
 			log.Print(err)
 		}
 	}
 
+	sendOpts := &services.SendOptions{
+		BaseURL:   *cfg.Address,
+		CryptoKey: pKey,
+	}
+	if cfg.HashKey != nil {
+		sendOpts.HashKey = *cfg.HashKey
+	}
+
+	if cfg.GRPCAddress != nil {
+
+		SendByGRPCCycle(workerPool, sendOpts, counter, cfg, data, *reportInterval)
+	} else {
+		client := resty.New()
+		SendByHTTPCycle(workerPool, sendOpts, counter, client, data, *reportInterval)
+	}
+}
+
+func SendByGRPCCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
+	counter *int64, cfg *config.Config, data *services.MetricsData, reportInterval int) {
+	ctx := context.Background()
+	conn, err := grpc.NewClient(*cfg.GRPCAddress,
+		grpc.WithChainUnaryInterceptor(
+			interceptor.SetHashInterceptor(cfg.HashKey),
+			interceptor.SetIPInterceptor(services.GetIPGetter().IP),
+		),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.UseCompressor(gzip.Name)),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	client := pb.NewMetricsServiceClient(conn)
+
+	go func() {
+		defer conn.Close()
+		retryCtr := retry.NewControllerStd(func(err error) bool {
+			st, ok := status.FromError(err)
+			if !ok {
+				return false
+			}
+
+			switch st.Code() {
+			case codes.Unavailable,
+				codes.DeadlineExceeded,
+				codes.ResourceExhausted,
+				codes.Internal,
+				codes.Unknown:
+				return true
+			default:
+				return false
+			}
+		})
+
+		for {
+			workerPool.AddTask(func() {
+				err := retryCtr.Do(func() error {
+					return services.SendMetricsBatchGRPC(ctx, client, data.StatRuntime)
+				})
+				if err != nil {
+					log.Print(err)
+				}
+				atomic.StoreInt64(counter, 0)
+			})
+
+			workerPool.AddTask(func() {
+				err := retryCtr.Do(func() error {
+					return services.SendMetricsBatchGRPC(ctx, client, data.StatGopsutil)
+				})
+				if err != nil {
+					log.Print(err)
+				}
+				atomic.StoreInt64(counter, 0)
+			})
+
+			time.Sleep(time.Duration(reportInterval) * time.Second)
+		}
+
+	}()
+}
+
+func SendByHTTPCycle(workerPool *workerpool.WorkerPool, sendOpts *services.SendOptions,
+	counter *int64, client *resty.Client, data *services.MetricsData, reportInterval int) {
 	go func() {
 		retryCtr := retry.NewControllerStd(func(err error) bool {
 			var netErr net.Error
@@ -113,14 +203,7 @@ func runMetricsSender(cfg *config.Config,
 			return false
 		})
 
-		sendOpts := &services.SendOptions{
-			BaseURL:   cfg.Address,
-			HashKey:   cfg.HashKey,
-			CryptoKey: pKey,
-		}
-
 		for {
-			// Отправляем разные наборы метрик
 			workerPool.AddTask(func() {
 				err := retryCtr.Do(func() error {
 					return services.SendMetricsBatch(client, data.StatRuntime, sendOpts)

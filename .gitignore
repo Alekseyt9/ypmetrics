@@ -29,3 +29,4 @@ vendor/
 /cmd/keygen/public.key
 /cmd/agent/public.key
 /cmd/server/private.key
+/cmd/server/metrics-db.json

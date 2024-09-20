@@ -16,6 +16,7 @@ import (
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/compress"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/crypto"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/hash"
+	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/ipcheck"
 	"github.com/Alekseyt9/ypmetrics/internal/server/middleware/logger"
 	"github.com/Alekseyt9/ypmetrics/internal/server/storage"
 	"github.com/go-chi/chi/v5"
@@ -99,13 +100,17 @@ func setupUpdateRoutes(r *chi.Mux, h *handlers.MetricsHandler) {
 //
 // Returns a MetricsHandler instance.
 func initHandler(store storage.Storage, cfg *config.Config, log log.Logger) *handlers.MetricsHandler {
-	hs := handlers.HandlerSettings{
-		DatabaseDSN: cfg.DataBaseDSN,
-		HashKey:     cfg.HashKey,
+	hs := handlers.HandlerSettings{}
+	if cfg.DataBaseDSN != nil {
+		hs.DatabaseDSN = *cfg.DataBaseDSN
 	}
-	if cfg.StoreInterval == 0 {
+	if cfg.HashKey != nil {
+		hs.HashKey = *cfg.HashKey
+	}
+
+	if cfg.StoreInterval == nil {
 		hs.StoreToFileSync = true
-		hs.SaveFile = cfg.FileStoragePath
+		hs.SaveFile = *cfg.FileStoragePath
 	}
 
 	return handlers.NewMetricsHandler(store, hs, log)
@@ -121,12 +126,20 @@ func setupMiddleware(r *chi.Mux, log log.Logger, cfg *config.Config) {
 		return logger.WithLogging(next, log)
 	})
 
-	r.Use(func(next http.Handler) http.Handler {
-		return hash.WithHash(next, cfg.HashKey)
-	})
+	if cfg.TrustedSubnet != nil {
+		r.Use(func(next http.Handler) http.Handler {
+			return ipcheck.WithIPCheck(next, *cfg.TrustedSubnet)
+		})
+	}
 
-	if cfg.CryptoKeyFile != "" {
-		key, err := cr.LoadPrivateKey(cfg.CryptoKeyFile)
+	if cfg.HashKey != nil {
+		r.Use(func(next http.Handler) http.Handler {
+			return hash.WithHash(next, *cfg.HashKey)
+		})
+	}
+
+	if cfg.CryptoKeyFile != nil {
+		key, err := cr.LoadPrivateKey(*cfg.CryptoKeyFile)
 		if err != nil {
 			log.Error("LoadPrivateKey", err)
 		}
@@ -152,8 +165,8 @@ func Run(cfg *config.Config) error {
 	var store storage.Storage
 	logger := log.NewSlogLogger()
 
-	if cfg.DataBaseDSN != "" {
-		innerStore, err := storage.NewDBStorage(cfg.DataBaseDSN)
+	if cfg.DataBaseDSN != nil {
+		innerStore, err := storage.NewDBStorage(*cfg.DataBaseDSN)
 		if err != nil {
 			return err
 		}
@@ -164,37 +177,42 @@ func Run(cfg *config.Config) error {
 		store = storage.NewMemStorage()
 	}
 
-	if cfg.Restore && cfg.FileStoragePath != "" {
+	if *cfg.Restore && cfg.FileStoragePath != nil {
 		if memStore, ok := store.(*storage.MemStorage); ok {
-			err := memStore.LoadFromFile(cfg.FileStoragePath)
+			err := memStore.LoadFromFile(*cfg.FileStoragePath)
 			if err != nil {
 				logger.Info("Load from file", "error", err)
 			}
 		}
 	}
 
-	return serverStart(store, cfg, logger)
+	stop := make(chan error, 2)
+	serverStart(store, cfg, logger, stop)
+	grpcServerStart(store, cfg, logger, stop)
+	err := <-stop
+
+	return err
 }
 
-func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) error {
+func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger, stop chan error) {
 	r := Router(store, logger, cfg)
 
 	server := &http.Server{
-		Addr:         cfg.Address,
+		Addr:         *cfg.Address,
 		Handler:      r,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
 	}
 
-	if cfg.StoreInterval > 0 {
+	if *cfg.StoreInterval > 0 {
 		go func() {
 			for {
 				if memStore, ok := store.(*storage.MemStorage); ok {
-					if err := memStore.SaveToFile(cfg.FileStoragePath); err != nil {
+					if err := memStore.SaveToFile(*cfg.FileStoragePath); err != nil {
 						logger.Info("Save to dump", "error", err)
 					}
-					time.Sleep(time.Duration(cfg.StoreInterval) * time.Second)
+					time.Sleep(time.Duration(*cfg.StoreInterval) * time.Second)
 				}
 			}
 		}()
@@ -202,8 +220,13 @@ func serverStart(store storage.Storage, cfg *config.Config, logger log.Logger) e
 
 	finalize(store, server, cfg, logger)
 
-	logger.Info("Running server on ", "address", cfg.Address)
-	return server.ListenAndServe()
+	go func() {
+		logger.Info("Running server on ", "address", cfg.Address)
+		err := server.ListenAndServe()
+		if err != nil {
+			stop <- err
+		}
+	}()
 }
 
 func finalize(store storage.Storage, server *http.Server, cfg *config.Config, logger log.Logger) {
@@ -213,7 +236,7 @@ func finalize(store storage.Storage, server *http.Server, cfg *config.Config, lo
 		<-sigs
 
 		if memStore, ok := store.(*storage.MemStorage); ok {
-			if err := memStore.SaveToFile(cfg.FileStoragePath); err != nil {
+			if err := memStore.SaveToFile(*cfg.FileStoragePath); err != nil {
 				logger.Info("Save to dump", "error", err)
 			}
 		}
